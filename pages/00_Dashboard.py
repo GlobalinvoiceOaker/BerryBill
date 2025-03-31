@@ -282,7 +282,9 @@ if view_option == "País" and selected_country == "Todos":
             "Valor Pago": inv.get('payment_amount', 0) if 'payment_amount' in inv else 0,
             "Valor em Aberto": inv.get('total_amount', 0) - (inv.get('payment_amount', 0) if 'payment_amount' in inv else 0),
             "Status": "Paga" if inv.get('paid', False) else "Em aberto",
-            "Data de Vencimento": (inv.get('created_at', datetime.now()) + timedelta(days=30)).strftime('%d/%m/%Y') if hasattr(inv.get('created_at', datetime.now()), 'strftime') else 'N/A'
+            "Data de Vencimento": inv.get('due_date').strftime('%d/%m/%Y') if 'due_date' in inv and hasattr(inv['due_date'], 'strftime') else 
+                               (inv['installments'][0]['due_date'].strftime('%d/%m/%Y') if 'installments' in inv and inv['installments'] and hasattr(inv['installments'][0]['due_date'], 'strftime') else
+                               (inv.get('created_at', datetime.now()) + timedelta(days=30)).strftime('%d/%m/%Y') if hasattr(inv.get('created_at', datetime.now()), 'strftime') else 'N/A')
         } for inv in filtered_invoices
     ])
     
@@ -343,7 +345,9 @@ elif view_option == "Master" and selected_master == "Todos":
             "Valor Pago": inv.get('payment_amount', 0) if 'payment_amount' in inv else 0,
             "Valor em Aberto": inv.get('total_amount', 0) - (inv.get('payment_amount', 0) if 'payment_amount' in inv else 0),
             "Status": "Paga" if inv.get('paid', False) else "Em aberto",
-            "Data de Vencimento": (inv.get('created_at', datetime.now()) + timedelta(days=30)).strftime('%d/%m/%Y') if hasattr(inv.get('created_at', datetime.now()), 'strftime') else 'N/A'
+            "Data de Vencimento": inv.get('due_date').strftime('%d/%m/%Y') if 'due_date' in inv and hasattr(inv['due_date'], 'strftime') else 
+                               (inv['installments'][0]['due_date'].strftime('%d/%m/%Y') if 'installments' in inv and inv['installments'] and hasattr(inv['installments'][0]['due_date'], 'strftime') else
+                               (inv.get('created_at', datetime.now()) + timedelta(days=30)).strftime('%d/%m/%Y') if hasattr(inv.get('created_at', datetime.now()), 'strftime') else 'N/A')
         } for inv in filtered_invoices
     ])
     
@@ -405,7 +409,9 @@ else:
             "Valor Pago": inv.get('payment_amount', 0) if 'payment_amount' in inv else 0,
             "Valor em Aberto": inv.get('total_amount', 0) - (inv.get('payment_amount', 0) if 'payment_amount' in inv else 0),
             "Status": "Paga" if inv.get('paid', False) else "Em aberto",
-            "Data de Vencimento": (inv.get('created_at', datetime.now()) + timedelta(days=30)).strftime('%d/%m/%Y') if hasattr(inv.get('created_at', datetime.now()), 'strftime') else 'N/A'
+            "Data de Vencimento": inv.get('due_date').strftime('%d/%m/%Y') if 'due_date' in inv and hasattr(inv['due_date'], 'strftime') else 
+                               (inv['installments'][0]['due_date'].strftime('%d/%m/%Y') if 'installments' in inv and inv['installments'] and hasattr(inv['installments'][0]['due_date'], 'strftime') else
+                               (inv.get('created_at', datetime.now()) + timedelta(days=30)).strftime('%d/%m/%Y') if hasattr(inv.get('created_at', datetime.now()), 'strftime') else 'N/A')
         } for inv in filtered_invoices
     ])
     
@@ -428,15 +434,23 @@ else:
 # Resumo de Faturas por Status
 st.markdown('<div class="sub-header">Resumo de Faturas por Status</div>', unsafe_allow_html=True)
 
+# Função para obter a data de vencimento de uma fatura
+def get_due_date(inv):
+    if 'due_date' in inv and inv['due_date']:
+        return inv['due_date']
+    elif 'installments' in inv and inv['installments'] and len(inv['installments']) > 0:
+        return inv['installments'][0]['due_date']
+    else:
+        # Fallback para o cálculo padrão antigo
+        return inv.get('created_at', datetime.now()) + timedelta(days=30)
+
 # Contar faturas por status
 status_counts = {
     "Paga": len([inv for inv in filtered_invoices if inv.get('paid', False)]),
     "Vencida": len([inv for inv in filtered_invoices if not inv.get('paid', False) and 
-                   hasattr(inv.get('created_at', datetime.now()), 'strftime') and 
-                   (inv.get('created_at', datetime.now()) + timedelta(days=30)) < datetime.now()]),
+                   get_due_date(inv) < datetime.now()]),
     "A Vencer": len([inv for inv in filtered_invoices if not inv.get('paid', False) and 
-                    hasattr(inv.get('created_at', datetime.now()), 'strftime') and 
-                    (inv.get('created_at', datetime.now()) + timedelta(days=30)) >= datetime.now()])
+                    get_due_date(inv) >= datetime.now()])
 }
 
 # Mostrar contagem e proporção

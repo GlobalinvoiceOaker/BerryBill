@@ -403,11 +403,20 @@ with tabs[1]:
                 partner = st.text_input("Nome do Parceiro/Master", 
                                       placeholder="Ex: Global Retail Partners")
             
-            # Data de emissão
+            # Data de emissão e vencimento
             st.markdown("### Datas da Fatura")
-            col_issue_date, col_due_days = st.columns(2)
+            col_issue_date, col_due_date = st.columns(2)
             with col_issue_date:
                 issue_date = st.date_input("Data de Emissão", value=datetime.now())
+            
+            with col_due_date:
+                # Data de vencimento padrão 30 dias após a emissão
+                default_due_date = issue_date + timedelta(days=30)
+                due_date = st.date_input("Data de Vencimento", value=default_due_date)
+                
+                # Verificar se a data de vencimento é posterior à data de emissão
+                if due_date < issue_date:
+                    st.warning("A data de vencimento não pode ser anterior à data de emissão.")
             
             # Valores de vendas e taxas
             st.markdown("### Valores e Taxas")
@@ -605,6 +614,7 @@ with tabs[1]:
                         'exchange_rate': exchange_rate,
                         'invoice_number': invoice_number,
                         'issue_date': issue_date,
+                        'due_date': due_date,  # Adicionando a data de vencimento
                         'created_at': datetime.now(),
                         'sent': False,
                         'paid': False,
@@ -647,7 +657,7 @@ with tabs[1]:
             # Número e informações básicas
             st.markdown(f"**Fatura #:** {invoice['invoice_number']}")
             
-            # Mostrar data de emissão se disponível, senão a data de criação
+            # Mostrar data de emissão e vencimento
             if 'issue_date' in invoice and invoice['issue_date']:
                 issue_date = invoice['issue_date']
                 if isinstance(issue_date, datetime):
@@ -656,7 +666,16 @@ with tabs[1]:
                     issue_date_str = issue_date.strftime('%d/%m/%Y') if hasattr(issue_date, 'strftime') else str(issue_date)
                 st.markdown(f"**Data de Emissão:** {issue_date_str}")
             else:
-                st.markdown(f"**Data:** {invoice['created_at'].strftime('%d/%m/%Y')}")
+                st.markdown(f"**Data de Emissão:** {invoice['created_at'].strftime('%d/%m/%Y')}")
+            
+            # Mostrar data de vencimento (se não tiver parcelamento)
+            if 'due_date' in invoice and invoice['due_date'] and ('installments' not in invoice or not invoice['installments']):
+                due_date = invoice['due_date']
+                if isinstance(due_date, datetime):
+                    due_date_str = due_date.strftime('%d/%m/%Y')
+                else:
+                    due_date_str = due_date.strftime('%d/%m/%Y') if hasattr(due_date, 'strftime') else str(due_date)
+                st.markdown(f"**Data de Vencimento:** {due_date_str}")
                 
             st.markdown(f"**Parceiro:** {invoice['partner']}")
             st.markdown(f"**País:** {invoice['country']}")

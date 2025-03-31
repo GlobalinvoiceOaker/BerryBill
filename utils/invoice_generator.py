@@ -88,10 +88,16 @@ def create_invoice_pdf(invoice_data):
     else:
         issue_date = datetime.now()
         
-    # Se houver parcelas, usamos a data da primeira parcela como vencimento
+    # Determinar data de vencimento
     if 'installments' in invoice_data and invoice_data['installments']:
+        # Se houver parcelas, usamos a data da primeira parcela como vencimento
         first_installment = invoice_data['installments'][0]
         due_date = first_installment['due_date']
+        if isinstance(due_date, str):
+            due_date = datetime.strptime(due_date, '%Y-%m-%d')
+    elif 'due_date' in invoice_data and invoice_data['due_date']:
+        # Se houver data de vencimento definida diretamente
+        due_date = invoice_data['due_date']
         if isinstance(due_date, str):
             due_date = datetime.strptime(due_date, '%Y-%m-%d')
     else:

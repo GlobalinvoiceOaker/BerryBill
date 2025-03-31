@@ -125,16 +125,24 @@ with tabs[0]:
             
             # Opções de câmbio
             with col_exchange_rate:
-                use_bc_exchange_rate = st.checkbox("Usar taxa de câmbio do Banco Central", value=True)
+                use_bc_exchange_rate = st.checkbox("Usar taxa de câmbio do Banco Central", 
+                                               value=st.session_state.get('use_bc_auto_rate', True),
+                                               key='use_bc_auto_rate_checkbox')
+                
+                # Atualiza o estado da sessão
+                st.session_state.use_bc_auto_rate = use_bc_exchange_rate
                 
                 if use_bc_exchange_rate:
-                    # Se usuário quiser usar taxa do BC, tente obtê-la
-                    exchange_rate_bc = get_bc_exchange_rate(issue_date)
-                    if exchange_rate_bc:
-                        st.success(f"Taxa obtida com sucesso: {exchange_rate_bc:.4f}")
-                        st.session_state.current_bc_rate = exchange_rate_bc
-                    else:
-                        st.warning("Não foi possível obter a taxa de câmbio para a data selecionada. Será usada a taxa padrão.")
+                    # Se usuário quiser usar taxa do BC, tente obtê-la automaticamente
+                    try:
+                        exchange_rate_bc = get_bc_exchange_rate(issue_date)
+                        if exchange_rate_bc:
+                            st.success(f"Taxa obtida com sucesso: {exchange_rate_bc:.4f}")
+                            st.session_state.current_bc_rate = exchange_rate_bc
+                        else:
+                            st.warning("Não foi possível obter a taxa de câmbio para a data selecionada. Será usada a taxa padrão.")
+                    except Exception as e:
+                        st.warning(f"Erro ao obter taxa: {str(e)}. Usando taxa padrão.")
             
             # Opções de parcelamento
             enable_installments = st.checkbox("Habilitar parcelamento das faturas")
@@ -312,6 +320,18 @@ with tabs[0]:
                     
                     with col1:
                         st.markdown(f"**Número da Fatura:** {selected_invoice['invoice_number']}")
+                        
+                        # Mostrar data de emissão se disponível
+                        if 'issue_date' in selected_invoice and selected_invoice['issue_date']:
+                            issue_date = selected_invoice['issue_date']
+                            if isinstance(issue_date, datetime):
+                                issue_date_str = issue_date.strftime('%d/%m/%Y')
+                            else:
+                                issue_date_str = issue_date.strftime('%d/%m/%Y') if hasattr(issue_date, 'strftime') else str(issue_date)
+                            st.markdown(f"**Data de Emissão:** {issue_date_str}")
+                        else:
+                            st.markdown(f"**Data:** {selected_invoice['created_at'].strftime('%d/%m/%Y')}")
+                            
                         st.markdown(f"**Parceiro:** {selected_invoice['partner']}")
                         st.markdown(f"**País:** {selected_invoice['country']}")
                         st.markdown(f"**Período:** {selected_invoice['month_name']} {selected_invoice['year']}")
@@ -322,6 +342,18 @@ with tabs[0]:
                         st.markdown(f"**Valor do Fundo de Publicidade:** {selected_invoice['currency']} {selected_invoice['ad_fund_amount']:,.2f}")
                         st.markdown(f"**Valor de Impostos:** {selected_invoice['currency']} {selected_invoice['tax_amount']:,.2f}")
                         st.markdown(f"**Valor Total:** {selected_invoice['currency']} {selected_invoice['total_amount']:,.2f}")
+                        if 'amount_usd' in selected_invoice:
+                            st.markdown(f"**Total USD:** $ {selected_invoice['amount_usd']:,.2f}")
+                        
+                    # Mostrar informações de parcelamento, se houverem
+                    if 'installments' in selected_invoice and selected_invoice['installments']:
+                        st.markdown("---")
+                        st.markdown("**Plano de Parcelamento:**")
+                        
+                        for i, installment in enumerate(selected_invoice['installments']):
+                            due_date = installment['due_date']
+                            due_date_str = due_date.strftime('%d/%m/%Y') if hasattr(due_date, 'strftime') else str(due_date)
+                            st.markdown(f"Parcela {i+1}: {selected_invoice['currency']} {installment['amount']:,.2f} - Vencimento: {due_date_str}")
                     
                     # Link de download
                     st.markdown(get_invoice_download_link(selected_invoice, "Baixar PDF"), unsafe_allow_html=True)
@@ -487,26 +519,42 @@ with tabs[1]:
             
             # Taxa de câmbio
             st.markdown("### Taxa de Câmbio")
-            col_get_rate, col_exchange_rate = st.columns(2)
             
-            with col_get_rate:
-                if st.button("Obter Taxa de Câmbio do Banco Central"):
-                    # Tentar obter a taxa do Banco Central para a data de emissão
-                    exchange_rate_bc = get_bc_exchange_rate(issue_date)
+            # Botão para obtenção de taxa de câmbio não pode estar no formulário
+            # Movido para fora do formulário e substituído por checkbox e sessão
+            use_bc_rate = st.checkbox("Usar taxa de câmbio do Banco Central", 
+                                    value=st.session_state.get('use_bc_rate', False),
+                                    key='use_bc_rate_checkbox')
+            
+            # Atualiza o estado da sessão com a escolha do usuário
+            st.session_state.use_bc_rate = use_bc_rate
+            
+            # Se o usuário quiser usar a taxa do BC, tenta obtê-la automaticamente
+            if use_bc_rate:
+                try:
+                    # Usa a data de emissão atual do formulário
+                    current_issue_date = issue_date
+                    exchange_rate_bc = get_bc_exchange_rate(current_issue_date)
+                    
                     if exchange_rate_bc:
                         st.session_state.exchange_rate_bc = exchange_rate_bc
-                        st.success(f"Taxa obtida com sucesso: {exchange_rate_bc:.4f}")
+                        st.success(f"Taxa do Banco Central obtida: {exchange_rate_bc:.4f}")
                     else:
-                        st.error("Não foi possível obter a taxa de câmbio para a data selecionada.")
+                        st.warning("Não foi possível obter a taxa para a data selecionada. Usando taxa padrão.")
+                except Exception as e:
+                    st.warning(f"Erro ao obter taxa: {str(e)}. Usando taxa padrão.")
             
-            with col_exchange_rate:
-                # Usar a taxa obtida do BC, se disponível, ou a padrão do país
-                default_rate = st.session_state.get('exchange_rate_bc', 
-                                                 country_settings.get(country, {}).get('exchange_rate', 1.0))
-                exchange_rate = st.number_input("Taxa de Câmbio (para USD)", 
-                                              min_value=0.01, 
-                                              value=float(default_rate), 
-                                              format="%.4f")
+            # Campo para taxa de câmbio (usa a do BC se disponível)
+            default_rate = 0.0
+            if use_bc_rate and 'exchange_rate_bc' in st.session_state:
+                default_rate = st.session_state.exchange_rate_bc
+            else:
+                default_rate = country_settings.get(country, {}).get('exchange_rate', 1.0)
+                
+            exchange_rate = st.number_input("Taxa de Câmbio (para USD)", 
+                                        min_value=0.01, 
+                                        value=float(default_rate), 
+                                        format="%.4f")
             
             # Informações adicionais
             st.markdown("### Informações Adicionais")

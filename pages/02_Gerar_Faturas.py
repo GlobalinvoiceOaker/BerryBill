@@ -382,6 +382,18 @@ with tabs[1]:
         with st.form("manual_invoice_form"):
             st.markdown("### Informações Básicas da Fatura")
             
+            # Categoria de fatura
+            invoice_categories = [
+                "Royaltie", 
+                "Ad-fund", 
+                "Master Franchise Fee", 
+                "Franchise Fee", 
+                "CPG Distribution", 
+                "Development Agreement", 
+                "Other Recomes"
+            ]
+            invoice_category = st.selectbox("Categoria de Fatura", options=invoice_categories)
+            
             # Seletor de mês e ano
             col_month, col_year = st.columns(2)
             with col_month:
@@ -482,11 +494,16 @@ with tabs[1]:
                 # Distribuição do valor
                 st.markdown("#### Distribuição do Valor por Parcela")
                 
-                # Calcular valores iniciais
-                royalty_amount = total_sales * (royalty_rate / 100)
-                ad_fund_amount = total_sales * (ad_fund_rate / 100)
+                # Calcular valores - mesmo método atualizado
+                # 1. Calcula impostos locais sobre o total de vendas
+                tax_amount = total_sales * (tax_rate / 100)
+                # 2. Subtrai impostos para calcular base para royalties e fundo
+                base_amount = total_sales - tax_amount
+                # 3. Calcula royalties e fundo sobre a base
+                royalty_amount = base_amount * (royalty_rate / 100)
+                ad_fund_amount = base_amount * (ad_fund_rate / 100)
+                # 4. Calcula subtotal e total
                 subtotal = royalty_amount + ad_fund_amount
-                tax_amount = subtotal * (tax_rate / 100)
                 total_amount = subtotal + tax_amount
                 
                 # Distribuir em parcelas iguais por padrão
@@ -581,12 +598,18 @@ with tabs[1]:
                 if not partner:
                     st.error("Por favor, insira o nome do parceiro.")
                 else:
-                    # Calcular valores
-                    royalty_amount = total_sales * (royalty_rate / 100)
-                    ad_fund_amount = total_sales * (ad_fund_rate / 100)
+                    # Calcular valores - primeiro aplica impostos locais, depois aplica as alíquotas
+                    # 1. Calcula impostos locais sobre o total de vendas
+                    tax_amount = total_sales * (tax_rate / 100)
+                    # 2. Subtrai impostos para calcular base para royalties e fundo
+                    base_amount = total_sales - tax_amount
+                    # 3. Calcula royalties e fundo sobre a base
+                    royalty_amount = base_amount * (royalty_rate / 100)
+                    ad_fund_amount = base_amount * (ad_fund_rate / 100)
+                    # 4. Calcula subtotal e total
                     subtotal = royalty_amount + ad_fund_amount
-                    tax_amount = subtotal * (tax_rate / 100)
                     total_amount = subtotal + tax_amount
+                    # 5. Conversão para USD
                     amount_usd = total_amount / exchange_rate
                     
                     # Gerar número da fatura
@@ -596,6 +619,7 @@ with tabs[1]:
                     invoice_data = {
                         'partner': partner,
                         'country': country,
+                        'invoice_category': invoice_category,  # Adicionando categoria de fatura
                         'month': month,
                         'year': year,
                         'month_name': month_name,
@@ -679,6 +703,11 @@ with tabs[1]:
                 
             st.markdown(f"**Parceiro:** {invoice['partner']}")
             st.markdown(f"**País:** {invoice['country']}")
+            
+            # Mostrar categoria da fatura
+            if 'invoice_category' in invoice:
+                st.markdown(f"**Categoria:** {invoice['invoice_category']}")
+                
             st.markdown(f"**Período:** {invoice['month_name']} {invoice['year']}")
             
             # Separador
@@ -729,6 +758,7 @@ with tabs[1]:
                 "Fatura #": inv['invoice_number'],
                 "Parceiro": inv['partner'],
                 "País": inv['country'],
+                "Categoria": inv.get('invoice_category', 'Royaltie'),  # Valor padrão para faturas antigas
                 "Período": f"{inv['month_name']} {inv['year']}",
                 "Valor Total": f"{inv['currency']} {inv['total_amount']:,.2f}",
                 "Data de Geração": inv['created_at'].strftime("%d/%m/%Y") if hasattr(inv['created_at'], 'strftime') else inv['created_at'],

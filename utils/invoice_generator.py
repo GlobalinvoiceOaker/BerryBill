@@ -65,15 +65,39 @@ def create_invoice_pdf(invoice_data):
     elements = []
     
     # Logo da empresa (se existir)
-    logo_path = 'assets/logo_header.svg'
-    if os.path.exists(logo_path):
-        # Converter SVG para objeto ReportLab
-        logo_drawing = svg2rlg(logo_path)
-        # Redimensionar se necessário
-        logo_drawing.width = 2 * inch
-        logo_drawing.height = 0.8 * inch
-        # Adicionar ao documento
-        elements.append(Image(logo_drawing, width=2*inch, height=0.8*inch))
+    logo_paths = ['assets/logo_header.svg', 'assets/oakberry_logo.svg', 'attached_assets/Logo redonda arara roxa.jpg']
+    logo_found = False
+    
+    for logo_path in logo_paths:
+        if os.path.exists(logo_path):
+            if logo_path.endswith('.svg'):
+                # Converter SVG para objeto ReportLab
+                try:
+                    logo_drawing = svg2rlg(logo_path)
+                    # Redimensionar para um tamanho pequeno no canto superior
+                    aspect_ratio = logo_drawing.width / logo_drawing.height
+                    logo_width = 1.2 * inch  # Largura reduzida
+                    logo_height = logo_width / aspect_ratio
+                    logo_drawing.width = logo_width
+                    logo_drawing.height = logo_height
+                    # Adicionar ao documento
+                    elements.append(logo_drawing)
+                    logo_found = True
+                    break
+                except Exception as e:
+                    print(f"Erro ao processar SVG {logo_path}: {str(e)}")
+            else:
+                # Se for uma imagem raster, usamos a classe Image
+                try:
+                    img = Image(logo_path, width=1.2*inch, height=None)  # Manter proporções
+                    elements.append(img)
+                    logo_found = True
+                    break
+                except Exception as e:
+                    print(f"Erro ao processar imagem {logo_path}: {str(e)}")
+    
+    # Se encontrou um logo, adiciona um pequeno espaço depois
+    if logo_found:
         elements.append(Spacer(1, 0.15 * inch))
     
     # Título
@@ -111,6 +135,7 @@ def create_invoice_pdf(invoice_data):
     # Tabela de informações da fatura
     invoice_data_items = [
         ["Número da Fatura:", invoice_data['invoice_number']],
+        ["Categoria:", invoice_data.get('invoice_category', 'Royaltie')],  # Valor padrão para retrocompatibilidade
         ["Data de Emissão:", issue_date_str],
         ["Data de Vencimento:", due_date_str],
         ["Período:", f"{invoice_data['month_name']} {invoice_data['year']}"]
@@ -150,14 +175,15 @@ def create_invoice_pdf(invoice_data):
     elements.append(Paragraph("Resumo", header_style))
     elements.append(Spacer(1, 0.15 * inch))
     
-    # Tabela de resumo
+    # Tabela de resumo - atualizada para refletir a ordem correta de cálculo
     summary_data = [
         ["Descrição", "Taxa", "Valor", f"Valor ({invoice_data['currency']})"],
         ["Total de Vendas", "", "", f"{invoice_data['total_sell_out']:,.2f}"],
+        ["Impostos", f"{invoice_data['tax_rate']*100:.1f}%", "", f"{invoice_data['tax_amount']:,.2f}"],
+        ["Base para Cálculo", "", "", f"{invoice_data['total_sell_out'] - invoice_data['tax_amount']:,.2f}"],
         ["Royalties", f"{invoice_data['royalty_rate']*100:.1f}%", "", f"{invoice_data['royalty_amount']:,.2f}"],
         ["Fundo de Publicidade", f"{invoice_data['ad_fund_rate']*100:.1f}%", "", f"{invoice_data['ad_fund_amount']:,.2f}"],
         ["Subtotal", "", "", f"{invoice_data['subtotal']:,.2f}"],
-        ["Impostos", f"{invoice_data['tax_rate']*100:.1f}%", "", f"{invoice_data['tax_amount']:,.2f}"],
         ["Total a Pagar", "", "", f"{invoice_data['total_amount']:,.2f}"]
     ]
     

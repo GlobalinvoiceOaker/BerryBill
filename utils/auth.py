@@ -16,8 +16,36 @@ def ensure_users_file_exists():
     if not os.path.exists(USERS_FILE):
         with open(USERS_FILE, 'w') as f:
             json.dump({
-                "admin": hash_password("admin123"),  # senha inicial
-                "operador": hash_password("operador123")  # senha inicial
+                "Nickolas Silva": {
+                    "password": hash_password("Nick230420"),
+                    "role": "admin",
+                    "full_name": "Nickolas Silva"
+                },
+                "Ivan Bonilla": {
+                    "password": hash_password("ivan123"),
+                    "role": "gestor",
+                    "full_name": "Ivan Bonilla"
+                },
+                "Diego Gonçalves": {
+                    "password": hash_password("diego123"),
+                    "role": "admin",
+                    "full_name": "Diego Gonçalves"
+                },
+                "Luan Mendonça": {
+                    "password": hash_password("luan123"),
+                    "role": "gestor",
+                    "full_name": "Luan Mendonça"
+                },
+                "Luca Giaffone": {
+                    "password": hash_password("palmeiras"),
+                    "role": "gestor",
+                    "full_name": "Luca Giaffone"
+                },
+                "Igor Nakaoka": {
+                    "password": hash_password("igor123"),
+                    "role": "configuracao",
+                    "full_name": "Igor Nakaoka"
+                }
             }, f)
 
 def hash_password(password):
@@ -38,8 +66,37 @@ def check_password(username, password):
     if username not in users:
         return False
     
-    stored_password = users[username]
+    user_data = users[username]
+    stored_password = user_data["password"]
     return stored_password == hash_password(password)
+
+def get_user_role(username):
+    """
+    Retorna o papel (role) do usuário
+    """
+    ensure_users_file_exists()
+    
+    with open(USERS_FILE, 'r') as f:
+        users = json.load(f)
+    
+    if username not in users:
+        return None
+    
+    return users[username].get("role", "user")
+
+def get_user_fullname(username):
+    """
+    Retorna o nome completo do usuário
+    """
+    ensure_users_file_exists()
+    
+    with open(USERS_FILE, 'r') as f:
+        users = json.load(f)
+    
+    if username not in users:
+        return username
+    
+    return users[username].get("full_name", username)
 
 def login_required():
     """
@@ -48,6 +105,9 @@ def login_required():
     # Inicializa estado da sessão
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.session_state.user_role = ""
+        st.session_state.full_name = ""
         
     # Carrega o CSS personalizado
     try:
@@ -55,41 +115,56 @@ def login_required():
             st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
     except:
         pass
-        st.session_state.username = ""
     
     # Se não estiver logado, mostra tela de login
     if not st.session_state.logged_in:
-        # Usar a imagem do logo da OakBerry em vez de procurar um arquivo .png
-        from assets.logo_header import render_logo
-        render_logo(width=250)
+        # Centralizar o layout da tela de login
+        col1, col2, col3 = st.columns([1, 2, 1])
         
-        st.title("Sistema de Gerenciamento de Faturas")
-        
-        with st.form("login_form"):
-            username = st.text_input("Nome de Usuário")
-            password = st.text_input("Senha", type="password")
+        with col2:
+            # Usar a imagem do logo da OakBerry
+            from assets.logo_header import render_logo
+            render_logo(width=250)
             
-            submitted = st.form_submit_button("Entrar")
+            st.markdown('<h1 class="login-title">Sistema de Gerenciamento de Faturas</h1>', unsafe_allow_html=True)
             
-            if submitted:
-                if check_password(username, password):
-                    st.session_state.logged_in = True
-                    st.session_state.username = username
-                    st.success("Login bem-sucedido!")
-                    st.rerun()
-                else:
-                    st.error("Nome de usuário ou senha incorretos.")
-        
-        # Mostra nota de uso
-        st.markdown("""
-        ### Acesso ao Sistema
-        
-        Para acesso inicial, use as seguintes credenciais:
-        - Usuário: `admin` / Senha: `admin123`
-        - Usuário: `operador` / Senha: `operador123`
-        
-        Nota: Por motivos de segurança, altere as senhas iniciais após o primeiro acesso.
-        """)
+            # Criar uma caixa visualmente agradável para o formulário de login
+            st.markdown('<div class="login-box">', unsafe_allow_html=True)
+            
+            with st.form("login_form"):
+                st.markdown('#### Acesso ao Sistema', unsafe_allow_html=True)
+                username = st.text_input("Nome de Usuário")
+                password = st.text_input("Senha", type="password")
+                
+                submitted = st.form_submit_button("Entrar", use_container_width=True)
+                
+                if submitted:
+                    if check_password(username, password):
+                        # Armazena informações do usuário na sessão
+                        st.session_state.logged_in = True
+                        st.session_state.username = username
+                        st.session_state.user_role = get_user_role(username)
+                        st.session_state.full_name = get_user_fullname(username)
+                        st.success(f"Login bem-sucedido! Bem-vindo, {st.session_state.full_name}.")
+                        st.rerun()
+                    else:
+                        st.error("Nome de usuário ou senha incorretos.")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # Instruções de acesso mais elegantes
+            with st.expander("Informações de Acesso"):
+                st.markdown("""
+                ##### Usuários disponíveis:
+                - **Nickolas Silva** (Administrador)
+                - **Diego Gonçalves** (Administrador)
+                - **Ivan Bonilla** (Gestor)
+                - **Luan Mendonça** (Gestor)
+                - **Luca Giaffone** (Gestor)
+                - **Igor Nakaoka** (Configuração)
+                
+                *Para suporte, contate o administrador do sistema.*
+                """)
         
         # Impede a execução do restante da página
         st.stop()

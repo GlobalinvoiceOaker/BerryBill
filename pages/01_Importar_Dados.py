@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from utils.data_processor import validate_data, process_data
 from utils.auth import login_required
+from utils.access_control import check_access, show_access_denied
 from assets.logo_header import render_logo, render_icon
 
 st.set_page_config(
@@ -14,6 +15,10 @@ st.set_page_config(
 
 # Verifica login
 username = login_required()
+
+# Verifica permissão de acesso
+if not check_access(["admin", "configuracao"]):
+    show_access_denied()
 
 # Estilo personalizado
 st.markdown("""

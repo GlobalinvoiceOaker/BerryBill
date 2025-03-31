@@ -3,6 +3,19 @@ import os
 import base64
 from datetime import datetime
 import pandas as pd
+from utils.auth import login_required
+from assets.logo_header import render_logo, render_icon
+
+# Título e descrição do aplicativo
+st.set_page_config(
+    page_title="Sistema de Gerenciamento de Faturas",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Verifica login e obtem o usuário atual
+username = login_required()
 
 # Inicializa o estado da sessão se ainda não estiver feito
 if 'imported_data' not in st.session_state:
@@ -13,14 +26,6 @@ if 'payments' not in st.session_state:
     st.session_state.payments = None
 if 'reconciled_invoices' not in st.session_state:
     st.session_state.reconciled_invoices = []
-
-# Título e descrição do aplicativo
-st.set_page_config(
-    page_title="Sistema de Gerenciamento de Faturas",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Estilo personalizado para corresponder aos requisitos
 # Roxo (#4A1F60) como cor primária
@@ -45,9 +50,15 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Cabeçalho
-st.markdown('<div class="main-header">Sistema de Gerenciamento de Faturas</div>', unsafe_allow_html=True)
-st.markdown('<div class="description">Simplifique seu fluxo de trabalho de faturas com cálculos automatizados, geração de PDF e reconciliação de pagamentos.</div>', unsafe_allow_html=True)
+# Cabeçalho com logo
+col1, col2 = st.columns([1, 3])
+
+with col1:
+    render_logo(width=250)
+    
+with col2:
+    st.markdown(f'<div class="main-header">Olá, {username}!</div>', unsafe_allow_html=True)
+    st.markdown('<div class="description">Simplifique seu fluxo de trabalho de faturas com cálculos automatizados, geração de PDF e reconciliação de pagamentos.</div>', unsafe_allow_html=True)
 
 # Visão geral do painel
 st.markdown('<div class="sub-header">Visão Geral do Painel</div>', unsafe_allow_html=True)
@@ -96,15 +107,15 @@ col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("Importar Dados", use_container_width=True):
-        st.switch_page("pages/01_Import_Data.py")
+        st.switch_page("pages/01_Importar_Dados.py")
 
 with col2:
     if st.button("Gerar Faturas", use_container_width=True):
-        st.switch_page("pages/02_Generate_Invoices.py")
+        st.switch_page("pages/02_Gerar_Faturas.py")
 
 with col3:
     if st.button("Ver Relatórios", use_container_width=True):
-        st.switch_page("pages/05_Financial_Reports.py")
+        st.switch_page("pages/05_Relatorios_Financeiros.py")
 
 # Seção de instruções
 with st.expander("Como usar este aplicativo"):
@@ -123,6 +134,14 @@ with st.expander("Como usar este aplicativo"):
     - Reconcilie pagamentos regularmente para manter os registros financeiros atualizados
     """)
 
-# Rodapé
+# Rodapé com opção de logout
 st.markdown("---")
-st.markdown("© 2023 Sistema de Gerenciamento de Faturas | Desenvolvido com Streamlit")
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    st.markdown("© 2023 Sistema de Gerenciamento de Faturas | Desenvolvido com Streamlit")
+    
+with col2:
+    from utils.auth import logout
+    if st.button("Sair do Sistema", type="primary"):
+        logout()

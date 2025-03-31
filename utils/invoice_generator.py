@@ -9,6 +9,7 @@ import streamlit as st
 import base64
 import io
 import pandas as pd
+from svglib.svglib import svg2rlg
 
 def create_invoice_pdf(invoice_data):
     """
@@ -61,6 +62,18 @@ def create_invoice_pdf(invoice_data):
     
     # Cria elementos de conteúdo
     elements = []
+    
+    # Logo da empresa (se existir)
+    logo_path = 'assets/logo_header.svg'
+    if os.path.exists(logo_path):
+        # Converter SVG para objeto ReportLab
+        logo_drawing = svg2rlg(logo_path)
+        # Redimensionar se necessário
+        logo_drawing.width = 2 * inch
+        logo_drawing.height = 0.8 * inch
+        # Adicionar ao documento
+        elements.append(Image(logo_drawing, width=2*inch, height=0.8*inch))
+        elements.append(Spacer(1, 0.15 * inch))
     
     # Título
     elements.append(Paragraph("FATURA", title_style))

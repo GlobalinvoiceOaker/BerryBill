@@ -3,12 +3,19 @@ import pandas as pd
 from datetime import datetime
 from utils.data_processor import import_payment_data
 from utils.payment_reconciliation import reconcile_payments, find_potential_matches, manually_reconcile_payment
+from utils.invoice_generator import create_invoice_pdf, get_invoice_download_link
+from utils.auth import login_required
+from assets.logo_header import render_logo, render_icon
+import base64
 
 st.set_page_config(
     page_title="Reconciliar Pagamentos - Sistema de Gerenciamento de Faturas",
     page_icon="💰",
     layout="wide"
 )
+
+# Verifica login
+username = login_required()
 
 # Estilo personalizado
 st.markdown("""
@@ -30,9 +37,15 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Cabeçalho
-st.markdown('<div class="main-header">Reconciliar Pagamentos</div>', unsafe_allow_html=True)
-st.markdown('<div class="description">Associe pagamentos do extrato bancário com faturas</div>', unsafe_allow_html=True)
+# Cabeçalho com logo
+col1, col2 = st.columns([1, 3])
+
+with col1:
+    render_logo(width=200)
+    
+with col2:
+    st.markdown('<div class="main-header">Reconciliar Pagamentos</div>', unsafe_allow_html=True)
+    st.markdown('<div class="description">Associe pagamentos do extrato bancário com faturas</div>', unsafe_allow_html=True)
 
 # Inicializa estados da sessão se necessário
 if 'payments' not in st.session_state:
@@ -44,7 +57,7 @@ if 'reconciled_invoices' not in st.session_state:
 if 'invoices' not in st.session_state or not st.session_state.invoices:
     st.warning("Nenhuma fatura gerada. Por favor, gere faturas primeiro.")
     if st.button("Ir para Gerar Faturas"):
-        st.switch_page("pages/02_Generate_Invoices.py")
+        st.switch_page("pages/02_Gerar_Faturas.py")
 else:
     # Seção de importação de pagamentos
     st.markdown('<div class="sub-header">Importar Extrato Bancário</div>', unsafe_allow_html=True)
@@ -262,10 +275,43 @@ else:
                 paid_ratio = (total_paid / total_invoiced * 100) if total_invoiced > 0 else 0
                 st.metric("Taxa de Pagamento", f"{paid_ratio:.1f}%")
             
+            # Visualização direta de faturas
+            st.markdown('<div class="sub-header">Visualizar Faturas</div>', unsafe_allow_html=True)
+            
+            # Seleciona uma fatura para visualizar
+            selected_invoice_view_idx = st.selectbox(
+                "Selecione uma fatura para visualizar",
+                options=range(len(st.session_state.invoices)),
+                format_func=lambda i: f"{st.session_state.invoices[i]['invoice_number']} - {st.session_state.invoices[i]['partner']} ({st.session_state.invoices[i]['currency']} {st.session_state.invoices[i]['total_amount']:,.2f})"
+            )
+            
+            if selected_invoice_view_idx is not None:
+                selected_invoice_view = st.session_state.invoices[selected_invoice_view_idx]
+                
+                # Cria o PDF da fatura
+                invoice_pdf = create_invoice_pdf(selected_invoice_view)
+                
+                # Converte o PDF para base64 para embutir
+                encoded_pdf = base64.b64encode(invoice_pdf).decode('utf-8')
+                
+                # Adiciona botão de download
+                st.download_button(
+                    label="Baixar Fatura em PDF",
+                    data=invoice_pdf,
+                    file_name=f"{selected_invoice_view['invoice_number']}.pdf",
+                    mime="application/pdf"
+                )
+                
+                # Exibe o PDF embutido
+                st.markdown(f"""
+                <h4>Visualização da Fatura</h4>
+                <iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="600" type="application/pdf"></iframe>
+                """, unsafe_allow_html=True)
+            
             # Próximos passos
             st.markdown("#### Próximos Passos")
             if st.button("Ir para Relatórios Financeiros"):
-                st.switch_page("pages/05_Financial_Reports.py")
+                st.switch_page("pages/05_Relatorios_Financeiros.py")
         else:
             st.error(f"Erro ao importar extrato bancário: {error_message}")
             

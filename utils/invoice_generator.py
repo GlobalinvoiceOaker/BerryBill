@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -10,6 +10,7 @@ import base64
 import io
 import pandas as pd
 from svglib.svglib import svg2rlg
+from utils.exchange_rate import get_bc_exchange_rate
 
 def create_invoice_pdf(invoice_data):
     """
@@ -79,11 +80,33 @@ def create_invoice_pdf(invoice_data):
     elements.append(Paragraph("FATURA", title_style))
     elements.append(Spacer(1, 0.25 * inch))
     
+    # Determinar datas de emissão e vencimento
+    if 'issue_date' in invoice_data and invoice_data['issue_date']:
+        issue_date = invoice_data['issue_date']
+        if isinstance(issue_date, str):
+            issue_date = datetime.strptime(issue_date, '%Y-%m-%d')
+    else:
+        issue_date = datetime.now()
+        
+    # Se houver parcelas, usamos a data da primeira parcela como vencimento
+    if 'installments' in invoice_data and invoice_data['installments']:
+        first_installment = invoice_data['installments'][0]
+        due_date = first_installment['due_date']
+        if isinstance(due_date, str):
+            due_date = datetime.strptime(due_date, '%Y-%m-%d')
+    else:
+        # Caso contrário, usamos o padrão de 30 dias após a emissão
+        due_date = issue_date + timedelta(days=30)
+    
+    # Formatação das datas para exibição
+    issue_date_str = issue_date.strftime("%d/%m/%Y")
+    due_date_str = due_date.strftime("%d/%m/%Y")
+    
     # Tabela de informações da fatura
     invoice_data_items = [
         ["Número da Fatura:", invoice_data['invoice_number']],
-        ["Data:", datetime.now().strftime("%d/%m/%Y")],
-        ["Data de Vencimento:", (datetime.now() + pd.Timedelta(days=30)).strftime("%d/%m/%Y")],
+        ["Data de Emissão:", issue_date_str],
+        ["Data de Vencimento:", due_date_str],
         ["Período:", f"{invoice_data['month_name']} {invoice_data['year']}"]
     ]
     
@@ -100,10 +123,10 @@ def create_invoice_pdf(invoice_data):
     # Tabela De-Para (informações de faturamento)
     from_to_data = [
         ["De:", "Para:"],
-        ["Nome da Sua Empresa", invoice_data['partner']],
-        ["Seu Endereço Linha 1", "Endereço do Parceiro Linha 1"],
-        ["Sua Cidade, Estado, CEP", "Cidade do Parceiro, Estado, CEP"],
-        ["Seu País", invoice_data['country']]
+        ["OAKBERRY AÇAI INC.", invoice_data['partner']],
+        ["120 NW 25th Street, Ste 202", "Endereço do Parceiro Linha 1"],
+        ["Miami, Florida 33127", "Cidade do Parceiro, Estado, CEP"],
+        ["United States", invoice_data['country']]
     ]
     
     from_to_table = Table(from_to_data, colWidths=[2.5*inch, 2.5*inch])
@@ -132,6 +155,10 @@ def create_invoice_pdf(invoice_data):
         ["Total a Pagar", "", "", f"{invoice_data['total_amount']:,.2f}"]
     ]
     
+    # Adicionar linha com valor em USD
+    if 'amount_usd' in invoice_data:
+        summary_data.append(["Total (USD)", "", "", f"$ {invoice_data['amount_usd']:,.2f}"])
+    
     summary_table = Table(summary_data, colWidths=[2*inch, 1*inch, 1.5*inch, 1.5*inch])
     summary_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4A1F60')),
@@ -148,16 +175,55 @@ def create_invoice_pdf(invoice_data):
     elements.append(summary_table)
     elements.append(Spacer(1, 0.5 * inch))
     
+    # Mostrar informações de parcelamento, se houverem
+    if 'installments' in invoice_data and invoice_data['installments'] and len(invoice_data['installments']) > 0:
+        elements.append(Paragraph("Plano de Parcelamento", header_style))
+        elements.append(Spacer(1, 0.15 * inch))
+        
+        # Cabeçalho da tabela de parcelamento
+        installment_data = [
+            ["Parcela", "Vencimento", f"Valor ({invoice_data['currency']})"]
+        ]
+        
+        # Adicionar cada parcela
+        for i, installment in enumerate(invoice_data['installments']):
+            due_date = installment['due_date']
+            if isinstance(due_date, datetime):
+                due_date_str = due_date.strftime("%d/%m/%Y")
+            else:
+                due_date_str = due_date
+                
+            installment_data.append([
+                f"{i+1}/{len(invoice_data['installments'])}",
+                due_date_str,
+                f"{installment['amount']:,.2f}"
+            ])
+        
+        # Criar e estilizar tabela de parcelamento
+        installment_table = Table(installment_data, colWidths=[1.5*inch, 1.5*inch, 3*inch])
+        installment_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4A1F60')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('ALIGN', (2, 1), (2, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            ('GRID', (0, 0), (-1, -1), 1, colors.lightgrey)
+        ]))
+        
+        elements.append(installment_table)
+        elements.append(Spacer(1, 0.5 * inch))
+    
     # Informações de pagamento
     elements.append(Paragraph("Informações de Pagamento", header_style))
     elements.append(Spacer(1, 0.15 * inch))
     
     payment_info = [
-        ["Nome do Banco:", "Nome do Seu Banco"],
-        ["Nome da Conta:", "Nome da Sua Empresa"],
-        ["Número da Conta:", "XXXX-XXXX-XXXX-XXXX"],
-        ["Agência:", "XXXX-X"],
-        ["SWIFT/BIC:", "XXXXXXXXXXX"]
+        ["Nome do Banco:", "Ebury Partners Belgium NV"],
+        ["Nome da Conta:", "Oakberry Acai INC"],
+        ["BIC/SWIFT:", "EBPBESM2"],
+        ["IBAN:", "ES6568890001715897335238"],
+        ["Endereço do Banco:", "Paseo de la Castellana, 202, Madrid, Spain"]
     ]
     
     payment_table = Table(payment_info, colWidths=[2*inch, 3*inch])
@@ -175,9 +241,10 @@ def create_invoice_pdf(invoice_data):
     elements.append(Spacer(1, 0.15 * inch))
     
     terms_text = """
-    1. O pagamento deve ser feito dentro de 30 dias da data da fatura.
+    1. O pagamento deve ser feito conforme as datas de vencimento indicadas.
     2. Por favor, inclua o número da fatura na referência do seu pagamento.
-    3. Para dúvidas sobre esta fatura, entre em contato com financeiro@suaempresa.com.br.
+    3. Para dúvidas sobre esta fatura, entre em contato com financeiro@oakberry.com.
+    4. Contas em atraso estão sujeitas a juros de 1% ao mês.
     """
     
     elements.append(Paragraph(terms_text, normal_style))

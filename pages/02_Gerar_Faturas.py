@@ -3,12 +3,13 @@ import pandas as pd
 import random
 import string
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from utils.invoice_generator import generate_invoices_from_data, get_invoice_download_link
 from utils.data_processor import load_country_settings
 from utils.auth import login_required
 from utils.access_control import check_access, show_access_denied
 from assets.logo_header import render_logo
+from utils.exchange_rate import get_bc_exchange_rate, get_exchange_rates_for_countries
 
 st.set_page_config(
     page_title="Gerar Faturas - Sistema de Gerenciamento de Faturas",
@@ -115,6 +116,92 @@ with tabs[0]:
             processed_data['Country'].isin(selected_countries)
         ]
         
+        # Configurações avançadas
+        with st.expander("Configurações Avançadas de Faturamento"):
+            # Data de emissão
+            col_issue_date, col_exchange_rate = st.columns(2)
+            with col_issue_date:
+                issue_date = st.date_input("Data de Emissão", value=datetime.now())
+            
+            # Opções de câmbio
+            with col_exchange_rate:
+                use_bc_exchange_rate = st.checkbox("Usar taxa de câmbio do Banco Central", value=True)
+                
+                if use_bc_exchange_rate:
+                    # Se usuário quiser usar taxa do BC, tente obtê-la
+                    exchange_rate_bc = get_bc_exchange_rate(issue_date)
+                    if exchange_rate_bc:
+                        st.success(f"Taxa obtida com sucesso: {exchange_rate_bc:.4f}")
+                        st.session_state.current_bc_rate = exchange_rate_bc
+                    else:
+                        st.warning("Não foi possível obter a taxa de câmbio para a data selecionada. Será usada a taxa padrão.")
+            
+            # Opções de parcelamento
+            enable_installments = st.checkbox("Habilitar parcelamento das faturas")
+            
+            if enable_installments:
+                col_num_inst, col_first_due = st.columns(2)
+                
+                with col_num_inst:
+                    num_installments = st.number_input("Número de Parcelas", min_value=1, max_value=12, value=2)
+                
+                with col_first_due:
+                    first_due_days = st.number_input("Dias até o vencimento da primeira parcela", 
+                                                  min_value=1, max_value=90, value=30)
+                
+                # Distribuição dos valores
+                installment_distribution = st.radio(
+                    "Distribuição das parcelas",
+                    options=["Iguais", "Percentual"],
+                    horizontal=True
+                )
+                
+                if installment_distribution == "Percentual":
+                    st.info("Defina a porcentagem de cada parcela (o total deve ser 100%)")
+                    
+                    percentages = []
+                    cols = st.columns(min(4, num_installments))
+                    
+                    for i in range(num_installments):
+                        col_idx = i % 4
+                        with cols[col_idx]:
+                            default_pct = 100 / num_installments
+                            pct = st.number_input(
+                                f"Parcela {i+1} (%)", 
+                                min_value=1.0, 
+                                max_value=100.0, 
+                                value=float(f"{default_pct:.1f}"),
+                                key=f"pct_{i}"
+                            )
+                            percentages.append(pct)
+                    
+                    # Validar total de porcentagens
+                    total_pct = sum(percentages)
+                    if abs(total_pct - 100.0) > 0.01:
+                        st.warning(f"A soma das porcentagens ({total_pct:.1f}%) deve ser 100%. Por favor, ajuste os valores.")
+                    
+                    # Armazenar na sessão para uso posterior
+                    st.session_state.installment_percentages = percentages
+                
+                # Calcular dias entre parcelas (assume uma distribuição uniforme)
+                days_between_payments = st.number_input("Dias entre parcelas", 
+                                                    min_value=15, 
+                                                    max_value=90, 
+                                                    value=30)
+                
+                # Armazenar configurações para uso posterior
+                st.session_state.installment_config = {
+                    "enabled": True,
+                    "num_installments": num_installments,
+                    "first_due_days": first_due_days,
+                    "distribution": installment_distribution,
+                    "days_between": days_between_payments
+                }
+            else:
+                # Se não usar parcelamento, limpar configurações anteriores
+                if 'installment_config' in st.session_state:
+                    st.session_state.installment_config = {"enabled": False}
+        
         # Exibir dados filtrados
         st.markdown("#### Visualização dos Dados Filtrados")
         st.dataframe(filtered_data.head(10), use_container_width=True)
@@ -122,8 +209,60 @@ with tabs[0]:
         # Botão de geração de faturas
         if st.button("Gerar Faturas"):
             with st.spinner("Gerando faturas..."):
-                # Gerar faturas
+                # Gerar faturas básicas
                 invoices = generate_invoices_from_data(filtered_data)
+                
+                # Adicionar informações de data de emissão e câmbio
+                for invoice in invoices:
+                    # Adicionar data de emissão
+                    invoice['issue_date'] = issue_date
+                    
+                    # Adicionar taxa de câmbio do BC se disponível
+                    if use_bc_exchange_rate and 'current_bc_rate' in st.session_state:
+                        invoice['exchange_rate'] = st.session_state.current_bc_rate
+                        invoice['amount_usd'] = invoice['total_amount'] / st.session_state.current_bc_rate
+                    
+                    # Adicionar informações de parcelamento se habilitado
+                    if 'installment_config' in st.session_state and st.session_state.installment_config.get('enabled', False):
+                        config = st.session_state.installment_config
+                        
+                        # Calcular datas e valores das parcelas
+                        installments = []
+                        
+                        # Usar distribuição percentual se escolhida
+                        if config['distribution'] == "Percentual" and 'installment_percentages' in st.session_state:
+                            percentages = st.session_state.installment_percentages
+                            
+                            # Ajustar para garantir que a soma seja exatamente 100%
+                            if abs(sum(percentages) - 100.0) > 0.01:
+                                adjustment = 100.0 - sum(percentages)
+                                percentages[-1] += adjustment
+                            
+                            # Criar parcelas com valores baseados nas porcentagens
+                            for i in range(config['num_installments']):
+                                due_date = issue_date + timedelta(days=config['first_due_days'] + (i * config['days_between']))
+                                amount = invoice['total_amount'] * (percentages[i] / 100.0)
+                                
+                                installments.append({
+                                    'number': i+1,
+                                    'due_date': due_date,
+                                    'amount': amount
+                                })
+                        else:
+                            # Divisão igual entre parcelas
+                            equal_amount = invoice['total_amount'] / config['num_installments']
+                            
+                            for i in range(config['num_installments']):
+                                due_date = issue_date + timedelta(days=config['first_due_days'] + (i * config['days_between']))
+                                
+                                installments.append({
+                                    'number': i+1,
+                                    'due_date': due_date,
+                                    'amount': equal_amount
+                                })
+                        
+                        # Adicionar à fatura
+                        invoice['installments'] = installments
                 
                 # Armazenar no estado da sessão (adicionar às faturas existentes, se houver)
                 if 'invoices' not in st.session_state:
@@ -232,6 +371,12 @@ with tabs[1]:
                 partner = st.text_input("Nome do Parceiro/Master", 
                                       placeholder="Ex: Global Retail Partners")
             
+            # Data de emissão
+            st.markdown("### Datas da Fatura")
+            col_issue_date, col_due_days = st.columns(2)
+            with col_issue_date:
+                issue_date = st.date_input("Data de Emissão", value=datetime.now())
+            
             # Valores de vendas e taxas
             st.markdown("### Valores e Taxas")
             
@@ -272,11 +417,96 @@ with tabs[1]:
                                          value=default_tax, 
                                          format="%.2f")
             
+            # Opções de parcelamento
+            st.markdown("### Opções de Parcelamento")
+            enable_installments = st.checkbox("Habilitar parcelamento da fatura")
+            
+            # Configurações de parcelamento (se habilitado)
+            installments_data = []
+            if enable_installments:
+                col_num_installments, col_first_due = st.columns(2)
+                
+                with col_num_installments:
+                    num_installments = st.number_input("Número de Parcelas", min_value=1, max_value=12, value=2)
+                
+                with col_first_due:
+                    # Primeira parcela vence em 30 dias por padrão
+                    first_due_date = st.date_input("Data de Vencimento da Primeira Parcela", 
+                                               value=issue_date + timedelta(days=30))
+                
+                # Se a primeira data for anterior à data de emissão, alerta o usuário
+                if first_due_date < issue_date:
+                    st.warning("A data de vencimento da primeira parcela é anterior à data de emissão da fatura.")
+                
+                # Distribuição do valor
+                st.markdown("#### Distribuição do Valor por Parcela")
+                
+                # Calcular valores iniciais
+                royalty_amount = total_sales * (royalty_rate / 100)
+                ad_fund_amount = total_sales * (ad_fund_rate / 100)
+                subtotal = royalty_amount + ad_fund_amount
+                tax_amount = subtotal * (tax_rate / 100)
+                total_amount = subtotal + tax_amount
+                
+                # Distribuir em parcelas iguais por padrão
+                equal_amount = total_amount / num_installments
+                
+                # Interface para configurar cada parcela
+                installments_data = []
+                
+                for i in range(num_installments):
+                    col_inst_num, col_inst_date, col_inst_amount = st.columns([1, 2, 2])
+                    
+                    with col_inst_num:
+                        st.markdown(f"**Parcela {i+1}**")
+                    
+                    with col_inst_date:
+                        # Calcular data de vencimento desta parcela (30 dias entre parcelas)
+                        due_date = first_due_date + timedelta(days=i*30)
+                        due_date_str = due_date.strftime("%d/%m/%Y")
+                        st.text_input(f"Vencimento parcela {i+1}", value=due_date_str, key=f"due_date_{i}", disabled=True)
+                    
+                    with col_inst_amount:
+                        inst_amount = st.number_input(f"Valor parcela {i+1}", 
+                                                   min_value=0.01, 
+                                                   value=round(equal_amount, 2),
+                                                   format="%.2f",
+                                                   key=f"inst_amount_{i}")
+                    
+                    # Guardar informações da parcela
+                    installments_data.append({
+                        'number': i+1,
+                        'due_date': due_date,
+                        'amount': inst_amount
+                    })
+                
+                # Verificar se a soma das parcelas é igual ao valor total
+                total_installments = sum(inst['amount'] for inst in installments_data)
+                if abs(total_installments - total_amount) > 0.01:
+                    st.warning(f"A soma das parcelas ({total_installments:.2f}) é diferente do valor total da fatura ({total_amount:.2f}).")
+            
             # Taxa de câmbio
-            exchange_rate = st.number_input("Taxa de Câmbio (para USD)", 
-                                          min_value=0.01, 
-                                          value=country_settings.get(country, {}).get('exchange_rate', 1.0), 
-                                          format="%.4f")
+            st.markdown("### Taxa de Câmbio")
+            col_get_rate, col_exchange_rate = st.columns(2)
+            
+            with col_get_rate:
+                if st.button("Obter Taxa de Câmbio do Banco Central"):
+                    # Tentar obter a taxa do Banco Central para a data de emissão
+                    exchange_rate_bc = get_bc_exchange_rate(issue_date)
+                    if exchange_rate_bc:
+                        st.session_state.exchange_rate_bc = exchange_rate_bc
+                        st.success(f"Taxa obtida com sucesso: {exchange_rate_bc:.4f}")
+                    else:
+                        st.error("Não foi possível obter a taxa de câmbio para a data selecionada.")
+            
+            with col_exchange_rate:
+                # Usar a taxa obtida do BC, se disponível, ou a padrão do país
+                default_rate = st.session_state.get('exchange_rate_bc', 
+                                                 country_settings.get(country, {}).get('exchange_rate', 1.0))
+                exchange_rate = st.number_input("Taxa de Câmbio (para USD)", 
+                                              min_value=0.01, 
+                                              value=float(default_rate), 
+                                              format="%.4f")
             
             # Informações adicionais
             st.markdown("### Informações Adicionais")
@@ -318,6 +548,7 @@ with tabs[1]:
                         'royalty_amount': royalty_amount,
                         'ad_fund_rate': ad_fund_rate,
                         'ad_fund_amount': ad_fund_amount,
+                        'subtotal': subtotal,
                         'tax_rate': tax_rate,
                         'tax_amount': tax_amount,
                         'total_amount': total_amount,
@@ -325,6 +556,7 @@ with tabs[1]:
                         'currency': currency,
                         'exchange_rate': exchange_rate,
                         'invoice_number': invoice_number,
+                        'issue_date': issue_date,
                         'created_at': datetime.now(),
                         'sent': False,
                         'paid': False,
@@ -332,6 +564,10 @@ with tabs[1]:
                         'notes': notes,
                         'due_status': 'A Vencer'  # Status inicial
                     }
+                    
+                    # Adicionar informações de parcelamento, se habilitado
+                    if enable_installments and installments_data:
+                        invoice_data['installments'] = installments_data
                     
                     # Armazenar no estado da sessão
                     if 'invoices' not in st.session_state:
@@ -362,7 +598,18 @@ with tabs[1]:
             
             # Número e informações básicas
             st.markdown(f"**Fatura #:** {invoice['invoice_number']}")
-            st.markdown(f"**Data:** {invoice['created_at'].strftime('%d/%m/%Y')}")
+            
+            # Mostrar data de emissão se disponível, senão a data de criação
+            if 'issue_date' in invoice and invoice['issue_date']:
+                issue_date = invoice['issue_date']
+                if isinstance(issue_date, datetime):
+                    issue_date_str = issue_date.strftime('%d/%m/%Y')
+                else:
+                    issue_date_str = issue_date.strftime('%d/%m/%Y') if hasattr(issue_date, 'strftime') else str(issue_date)
+                st.markdown(f"**Data de Emissão:** {issue_date_str}")
+            else:
+                st.markdown(f"**Data:** {invoice['created_at'].strftime('%d/%m/%Y')}")
+                
             st.markdown(f"**Parceiro:** {invoice['partner']}")
             st.markdown(f"**País:** {invoice['country']}")
             st.markdown(f"**Período:** {invoice['month_name']} {invoice['year']}")
@@ -385,6 +632,16 @@ with tabs[1]:
                 st.markdown(f"Total USD: $ {invoice['amount_usd']:,.2f}")
                 st.markdown(f"Taxa de Câmbio: {invoice['exchange_rate']}")
                 st.markdown(f"Status: {invoice['due_status']}")
+                
+            # Mostrar informações de parcelamento se disponíveis
+            if 'installments' in invoice and invoice['installments']:
+                st.markdown("<hr>", unsafe_allow_html=True)
+                st.markdown("**Plano de Parcelamento:**")
+                
+                for i, installment in enumerate(invoice['installments']):
+                    due_date = installment['due_date']
+                    due_date_str = due_date.strftime('%d/%m/%Y') if hasattr(due_date, 'strftime') else str(due_date)
+                    st.markdown(f"Parcela {i+1}: {invoice['currency']} {installment['amount']:,.2f} - Vencimento: {due_date_str}")
             
             # Fechar a caixa visual
             st.markdown('</div>', unsafe_allow_html=True)

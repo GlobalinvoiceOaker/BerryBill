@@ -1,0 +1,52 @@
+{
+    "US": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.0
+    },
+    "UK": {
+        "royalty_rate": 0.06,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.20
+    },
+    "BR": {
+        "royalty_rate": 0.06,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.17
+    },
+    "CA": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.05
+    },
+    "DE": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.19
+    },
+    "FR": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.20
+    },
+    "ES": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.21
+    },
+    "MX": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.16
+    },
+    "JP": {
+        "royalty_rate": 0.06,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.10
+    },
+    "AU": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.10
+    }
+}

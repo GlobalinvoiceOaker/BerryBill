@@ -48,11 +48,21 @@ def login_required():
     # Inicializa estado da sessão
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
+        
+    # Carrega o CSS personalizado
+    try:
+        with open('assets/style.css') as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    except:
+        pass
         st.session_state.username = ""
     
     # Se não estiver logado, mostra tela de login
     if not st.session_state.logged_in:
-        st.image("assets/logo_header.png", width=300)
+        # Usar a imagem do logo da OakBerry em vez de procurar um arquivo .png
+        from assets.logo_header import render_logo
+        render_logo(width=250)
+        
         st.title("Sistema de Gerenciamento de Faturas")
         
         with st.form("login_form"):

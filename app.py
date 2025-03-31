@@ -31,6 +31,12 @@ if 'reconciled_invoices' not in st.session_state:
 # Roxo (#4A1F60) como cor primária
 # Branco (#FFFFFF) para fundos e texto
 # Roxo escuro (#3A174E) para botões
+
+# Carrega arquivo CSS personalizado
+with open('assets/style.css') as f:
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+# Estilos básicos para cabeçalhos e texto
 st.markdown("""
     <style>
     .main-header {

@@ -4,10 +4,12 @@ address = "0.0.0.0"
 port = 5000
 
 [theme]
+# Cores principais do OAKBERRY (roxo principal)
 primaryColor = "#4A1F60"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
+secondaryBackgroundColor = "#F5F1F9"
 textColor = "#262730"
+font = "sans-serif"
 
-[font]
-sans_serif = "sans-serif"
+[browser]
+gatherUsageStats = false

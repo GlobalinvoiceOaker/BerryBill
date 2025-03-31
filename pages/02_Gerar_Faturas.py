@@ -702,7 +702,36 @@ with tabs[1]:
                 st.markdown(f"**Data de Vencimento:** {due_date_str}")
                 
             st.markdown(f"**Parceiro:** {invoice['partner']}")
-            st.markdown(f"**País:** {invoice['country']}")
+            
+            # Mapeamento de códigos de país para nomes completos
+            country_names = {
+                'BR': 'Brasil',
+                'US': 'Estados Unidos',
+                'ES': 'Espanha',
+                'PT': 'Portugal',
+                'MX': 'México',
+                'CO': 'Colômbia',
+                'AR': 'Argentina',
+                'CL': 'Chile',
+                'PE': 'Peru',
+                'IT': 'Itália',
+                'UK': 'Reino Unido',
+                'FR': 'França',
+                'DE': 'Alemanha',
+                'AU': 'Austrália',
+                'NZ': 'Nova Zelândia',
+                'JP': 'Japão',
+                'CN': 'China',
+                'AE': 'Emirados Árabes Unidos',
+                'SA': 'Arábia Saudita',
+                'KW': 'Kuwait',
+                'QA': 'Qatar',
+            }
+            
+            # Obtém o nome completo do país ou usa o código se não estiver no mapeamento
+            country_code = invoice['country']
+            country_name = country_names.get(country_code, country_code)
+            st.markdown(f"**País:** {country_name}")
             
             # Mostrar categoria da fatura
             if 'invoice_category' in invoice:
@@ -753,11 +782,36 @@ with tabs[1]:
         st.markdown('<div class="sub-header">Faturas Geradas</div>', unsafe_allow_html=True)
         
         # Converter para DataFrame para exibição mais fácil
+        # Mapeamento de códigos de país para nomes completos
+        country_names = {
+            'BR': 'Brasil',
+            'US': 'Estados Unidos',
+            'ES': 'Espanha',
+            'PT': 'Portugal',
+            'MX': 'México',
+            'CO': 'Colômbia',
+            'AR': 'Argentina',
+            'CL': 'Chile',
+            'PE': 'Peru',
+            'IT': 'Itália',
+            'UK': 'Reino Unido',
+            'FR': 'França',
+            'DE': 'Alemanha',
+            'AU': 'Austrália',
+            'NZ': 'Nova Zelândia',
+            'JP': 'Japão',
+            'CN': 'China',
+            'AE': 'Emirados Árabes Unidos',
+            'SA': 'Arábia Saudita',
+            'KW': 'Kuwait',
+            'QA': 'Qatar',
+        }
+            
         invoices_df = pd.DataFrame([
             {
                 "Fatura #": inv['invoice_number'],
                 "Parceiro": inv['partner'],
-                "País": inv['country'],
+                "País": country_names.get(inv['country'], inv['country']),  # Nome completo do país
                 "Categoria": inv.get('invoice_category', 'Royaltie'),  # Valor padrão para faturas antigas
                 "Período": f"{inv['month_name']} {inv['year']}",
                 "Valor Total": f"{inv['currency']} {inv['total_amount']:,.2f}",

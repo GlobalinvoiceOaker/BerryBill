@@ -152,12 +152,41 @@ def create_invoice_pdf(invoice_data):
     elements.append(Spacer(1, 0.25 * inch))
     
     # Tabela De-Para (informações de faturamento)
+    # Mapeamento de códigos de país para nomes completos
+    country_names = {
+        'BR': 'Brasil',
+        'US': 'Estados Unidos',
+        'ES': 'Espanha',
+        'PT': 'Portugal',
+        'MX': 'México',
+        'CO': 'Colômbia',
+        'AR': 'Argentina',
+        'CL': 'Chile',
+        'PE': 'Peru',
+        'IT': 'Itália',
+        'UK': 'Reino Unido',
+        'FR': 'França',
+        'DE': 'Alemanha',
+        'AU': 'Austrália',
+        'NZ': 'Nova Zelândia',
+        'JP': 'Japão',
+        'CN': 'China',
+        'AE': 'Emirados Árabes Unidos',
+        'SA': 'Arábia Saudita',
+        'KW': 'Kuwait',
+        'QA': 'Qatar',
+    }
+    
+    # Obtém o nome completo do país ou usa o código se não estiver no mapeamento
+    country_code = invoice_data['country']
+    country_name = country_names.get(country_code, country_code)
+    
     from_to_data = [
         ["De:", "Para:"],
         ["OAKBERRY AÇAI INC.", invoice_data['partner']],
         ["120 NW 25th Street, Ste 202", "Endereço do Parceiro Linha 1"],
         ["Miami, Florida 33127", "Cidade do Parceiro, Estado, CEP"],
-        ["United States", invoice_data['country']]
+        ["United States", country_name]
     ]
     
     from_to_table = Table(from_to_data, colWidths=[2.5*inch, 2.5*inch])

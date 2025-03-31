@@ -6,13 +6,13 @@ from datetime import datetime
 
 def load_country_settings():
     """
-    Load country settings from the JSON file
+    Carrega as configurações dos países do arquivo JSON
     """
     try:
         with open('data/country_settings.json', 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        # Return default settings if file doesn't exist
+        # Retorna configurações padrão se o arquivo não existir
         return {
             "US": {"royalty_rate": 0.05, "ad_fund_rate": 0.02, "tax_rate": 0.0},
             "UK": {"royalty_rate": 0.06, "ad_fund_rate": 0.02, "tax_rate": 0.20},
@@ -25,9 +25,9 @@ def load_country_settings():
 
 def save_country_settings(settings):
     """
-    Save country settings to the JSON file
+    Salva as configurações dos países no arquivo JSON
     """
-    # Create data directory if it doesn't exist
+    # Cria o diretório de dados se não existir
     os.makedirs('data', exist_ok=True)
     
     with open('data/country_settings.json', 'w') as f:
@@ -35,95 +35,95 @@ def save_country_settings(settings):
 
 def validate_data(df):
     """
-    Validate the imported data
+    Valida os dados importados
     
-    Returns:
-    - (bool, str): (is_valid, error_message)
+    Retorna:
+    - (bool, str): (é_válido, mensagem_de_erro)
     """
     required_columns = ['Date', 'Partner', 'Country', 'Amount', 'Currency']
     
-    # Check if required columns exist
+    # Verifica se as colunas obrigatórias existem
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
-        return False, f"Missing required columns: {', '.join(missing_columns)}"
+        return False, f"Colunas obrigatórias ausentes: {', '.join(missing_columns)}"
     
-    # Check for missing values in required fields
+    # Verifica valores ausentes em campos obrigatórios
     for col in required_columns:
         if df[col].isnull().any():
-            return False, f"Missing values in '{col}' column"
+            return False, f"Valores ausentes na coluna '{col}'"
     
-    # Check if dates are valid
+    # Verifica se as datas são válidas
     try:
         pd.to_datetime(df['Date'])
     except:
-        return False, "Invalid date format in 'Date' column"
+        return False, "Formato de data inválido na coluna 'Date'"
     
-    # Check if amounts are numeric
+    # Verifica se os valores são numéricos
     try:
         pd.to_numeric(df['Amount'])
     except:
-        return False, "Invalid numeric values in 'Amount' column"
+        return False, "Valores numéricos inválidos na coluna 'Amount'"
     
-    # Check if countries are supported
+    # Verifica se os países são suportados
     country_settings = load_country_settings()
     unsupported_countries = df[~df['Country'].isin(country_settings.keys())]['Country'].unique()
     if len(unsupported_countries) > 0:
-        return False, f"Unsupported countries found: {', '.join(unsupported_countries)}"
+        return False, f"Países não suportados encontrados: {', '.join(unsupported_countries)}"
     
     return True, ""
 
 def process_data(df):
     """
-    Process the imported data and calculate royalties, ad fund, and taxes
+    Processa os dados importados e calcula royalties, fundo de publicidade e impostos
     
-    Returns:
-    - DataFrame with additional calculated columns
+    Retorna:
+    - DataFrame com colunas calculadas adicionais
     """
-    # Load country settings
+    # Carrega configurações dos países
     country_settings = load_country_settings()
     
-    # Convert date column to datetime
+    # Converte coluna de data para datetime
     df['Date'] = pd.to_datetime(df['Date'])
     
-    # Ensure Amount is numeric
+    # Garante que Amount é numérico
     df['Amount'] = pd.to_numeric(df['Amount'])
     
-    # Create new columns for calculations
+    # Cria novas colunas para cálculos
     df['Royalty Rate'] = df['Country'].map({country: data['royalty_rate'] for country, data in country_settings.items()})
     df['Ad Fund Rate'] = df['Country'].map({country: data['ad_fund_rate'] for country, data in country_settings.items()})
     df['Tax Rate'] = df['Country'].map({country: data['tax_rate'] for country, data in country_settings.items()})
     
-    # Calculate amounts
+    # Calcula valores
     df['Royalty Amount'] = df['Amount'] * df['Royalty Rate']
     df['Ad Fund Amount'] = df['Amount'] * df['Ad Fund Rate']
     df['Subtotal'] = df['Royalty Amount'] + df['Ad Fund Amount']
     df['Tax Amount'] = df['Subtotal'] * df['Tax Rate']
     df['Total Amount'] = df['Subtotal'] + df['Tax Amount']
     
-    # Format amounts to 2 decimal places
+    # Formata valores para 2 casas decimais
     for col in ['Royalty Amount', 'Ad Fund Amount', 'Subtotal', 'Tax Amount', 'Total Amount']:
         df[col] = df[col].round(2)
     
-    # Add year and month columns for easier grouping
+    # Adiciona colunas de ano e mês para agrupamento mais fácil
     df['Year'] = df['Date'].dt.year
     df['Month'] = df['Date'].dt.month
     df['Month Name'] = df['Date'].dt.strftime('%B')
     
-    # Add invoice generation status column
+    # Adiciona coluna de status de geração de fatura
     df['Invoice Generated'] = False
     
     return df
 
 def group_data_by_partner(df):
     """
-    Group data by partner and month for invoice generation
+    Agrupa dados por parceiro e mês para geração de faturas
     
-    Returns:
-    - List of dictionaries with grouped data
+    Retorna:
+    - Lista de dicionários com dados agrupados
     """
     grouped_data = []
     
-    # Group by partner, country, year, and month
+    # Agrupa por parceiro, país, ano e mês
     for (partner, country, year, month), group_df in df.groupby(['Partner', 'Country', 'Year', 'Month']):
         month_name = group_df['Month Name'].iloc[0]
         
@@ -154,34 +154,34 @@ def group_data_by_partner(df):
 
 def import_payment_data(file):
     """
-    Import and validate payment data from CSV or Excel file
+    Importa e valida dados de pagamento de arquivos CSV ou Excel
     
-    Returns:
-    - (DataFrame, bool, str): (data, is_valid, error_message)
+    Retorna:
+    - (DataFrame, bool, str): (dados, é_válido, mensagem_de_erro)
     """
     try:
-        # Determine file type based on extension
+        # Determina o tipo de arquivo com base na extensão
         if file.name.endswith('.csv'):
             df = pd.read_csv(file)
         elif file.name.endswith(('.xls', '.xlsx')):
             df = pd.read_excel(file)
         else:
-            return None, False, "Unsupported file format. Please upload a CSV or Excel file."
+            return None, False, "Formato de arquivo não suportado. Por favor, faça upload de um arquivo CSV ou Excel."
         
-        # Validate required columns
+        # Valida colunas obrigatórias
         required_columns = ['Date', 'Amount', 'Description', 'Reference']
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
-            return None, False, f"Missing required columns: {', '.join(missing_columns)}"
+            return None, False, f"Colunas obrigatórias ausentes: {', '.join(missing_columns)}"
         
-        # Convert date column to datetime
+        # Converte coluna de data para datetime
         df['Date'] = pd.to_datetime(df['Date'])
         
-        # Ensure Amount is numeric
+        # Garante que Amount é numérico
         df['Amount'] = pd.to_numeric(df['Amount'])
         
         return df, True, ""
     
     except Exception as e:
-        return None, False, f"Error importing payment data: {str(e)}"
+        return None, False, f"Erro ao importar dados de pagamento: {str(e)}"

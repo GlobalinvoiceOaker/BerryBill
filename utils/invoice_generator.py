@@ -12,17 +12,17 @@ import pandas as pd
 
 def create_invoice_pdf(invoice_data):
     """
-    Create a PDF invoice from the given data
+    Cria um PDF de fatura a partir dos dados fornecidos
     
-    Parameters:
-    - invoice_data: Dictionary containing invoice information
+    Parâmetros:
+    - invoice_data: Dicionário contendo informações da fatura
     
-    Returns:
-    - bytes: PDF file as bytes
+    Retorna:
+    - bytes: Arquivo PDF como bytes
     """
     buffer = io.BytesIO()
     
-    # Create the PDF
+    # Cria o PDF
     doc = SimpleDocTemplate(
         buffer,
         pagesize=letter,
@@ -32,10 +32,10 @@ def create_invoice_pdf(invoice_data):
         bottomMargin=inch/2
     )
     
-    # Get styles
+    # Obtém estilos
     styles = getSampleStyleSheet()
     
-    # Create custom styles
+    # Cria estilos personalizados
     title_style = ParagraphStyle(
         'Title',
         parent=styles['Heading1'],
@@ -59,19 +59,19 @@ def create_invoice_pdf(invoice_data):
         spaceAfter=6
     )
     
-    # Create content elements
+    # Cria elementos de conteúdo
     elements = []
     
-    # Title
-    elements.append(Paragraph("INVOICE", title_style))
+    # Título
+    elements.append(Paragraph("FATURA", title_style))
     elements.append(Spacer(1, 0.25 * inch))
     
-    # Invoice info table
+    # Tabela de informações da fatura
     invoice_data_items = [
-        ["Invoice Number:", invoice_data['invoice_number']],
-        ["Date:", datetime.now().strftime("%Y-%m-%d")],
-        ["Due Date:", (datetime.now() + pd.Timedelta(days=30)).strftime("%Y-%m-%d")],
-        ["Period:", f"{invoice_data['month_name']} {invoice_data['year']}"]
+        ["Número da Fatura:", invoice_data['invoice_number']],
+        ["Data:", datetime.now().strftime("%d/%m/%Y")],
+        ["Data de Vencimento:", (datetime.now() + pd.Timedelta(days=30)).strftime("%d/%m/%Y")],
+        ["Período:", f"{invoice_data['month_name']} {invoice_data['year']}"]
     ]
     
     invoice_table = Table(invoice_data_items, colWidths=[2*inch, 3*inch])
@@ -84,13 +84,13 @@ def create_invoice_pdf(invoice_data):
     elements.append(invoice_table)
     elements.append(Spacer(1, 0.25 * inch))
     
-    # From-To table (billing info)
+    # Tabela De-Para (informações de faturamento)
     from_to_data = [
-        ["From:", "To:"],
-        ["Your Company Name", invoice_data['partner']],
-        ["Your Address Line 1", "Partner Address Line 1"],
-        ["Your City, State, ZIP", "Partner City, State, ZIP"],
-        ["Your Country", invoice_data['country']]
+        ["De:", "Para:"],
+        ["Nome da Sua Empresa", invoice_data['partner']],
+        ["Seu Endereço Linha 1", "Endereço do Parceiro Linha 1"],
+        ["Sua Cidade, Estado, CEP", "Cidade do Parceiro, Estado, CEP"],
+        ["Seu País", invoice_data['country']]
     ]
     
     from_to_table = Table(from_to_data, colWidths=[2.5*inch, 2.5*inch])
@@ -104,19 +104,19 @@ def create_invoice_pdf(invoice_data):
     elements.append(from_to_table)
     elements.append(Spacer(1, 0.5 * inch))
     
-    # Summary header
-    elements.append(Paragraph("Summary", header_style))
+    # Cabeçalho do resumo
+    elements.append(Paragraph("Resumo", header_style))
     elements.append(Spacer(1, 0.15 * inch))
     
-    # Summary table
+    # Tabela de resumo
     summary_data = [
-        ["Description", "Rate", "Amount", f"Amount ({invoice_data['currency']})"],
-        ["Total Sell Out", "", "", f"{invoice_data['total_sell_out']:,.2f}"],
+        ["Descrição", "Taxa", "Valor", f"Valor ({invoice_data['currency']})"],
+        ["Total de Vendas", "", "", f"{invoice_data['total_sell_out']:,.2f}"],
         ["Royalties", f"{invoice_data['royalty_rate']*100:.1f}%", "", f"{invoice_data['royalty_amount']:,.2f}"],
-        ["Ad Fund", f"{invoice_data['ad_fund_rate']*100:.1f}%", "", f"{invoice_data['ad_fund_amount']:,.2f}"],
+        ["Fundo de Publicidade", f"{invoice_data['ad_fund_rate']*100:.1f}%", "", f"{invoice_data['ad_fund_amount']:,.2f}"],
         ["Subtotal", "", "", f"{invoice_data['subtotal']:,.2f}"],
-        ["Taxes", f"{invoice_data['tax_rate']*100:.1f}%", "", f"{invoice_data['tax_amount']:,.2f}"],
-        ["Total Due", "", "", f"{invoice_data['total_amount']:,.2f}"]
+        ["Impostos", f"{invoice_data['tax_rate']*100:.1f}%", "", f"{invoice_data['tax_amount']:,.2f}"],
+        ["Total a Pagar", "", "", f"{invoice_data['total_amount']:,.2f}"]
     ]
     
     summary_table = Table(summary_data, colWidths=[2*inch, 1*inch, 1.5*inch, 1.5*inch])
@@ -135,15 +135,15 @@ def create_invoice_pdf(invoice_data):
     elements.append(summary_table)
     elements.append(Spacer(1, 0.5 * inch))
     
-    # Payment information
-    elements.append(Paragraph("Payment Information", header_style))
+    # Informações de pagamento
+    elements.append(Paragraph("Informações de Pagamento", header_style))
     elements.append(Spacer(1, 0.15 * inch))
     
     payment_info = [
-        ["Bank Name:", "Your Bank Name"],
-        ["Account Name:", "Your Company Name"],
-        ["Account Number:", "XXXX-XXXX-XXXX-XXXX"],
-        ["Routing Number:", "XXXXXXXXX"],
+        ["Nome do Banco:", "Nome do Seu Banco"],
+        ["Nome da Conta:", "Nome da Sua Empresa"],
+        ["Número da Conta:", "XXXX-XXXX-XXXX-XXXX"],
+        ["Agência:", "XXXX-X"],
         ["SWIFT/BIC:", "XXXXXXXXXXX"]
     ]
     
@@ -157,67 +157,67 @@ def create_invoice_pdf(invoice_data):
     elements.append(payment_table)
     elements.append(Spacer(1, 0.25 * inch))
     
-    # Terms and notes
-    elements.append(Paragraph("Terms and Conditions", header_style))
+    # Termos e notas
+    elements.append(Paragraph("Termos e Condições", header_style))
     elements.append(Spacer(1, 0.15 * inch))
     
     terms_text = """
-    1. Payment is due within 30 days of invoice date.
-    2. Please include the invoice number in your payment reference.
-    3. For questions regarding this invoice, please contact accounting@yourcompany.com.
+    1. O pagamento deve ser feito dentro de 30 dias da data da fatura.
+    2. Por favor, inclua o número da fatura na referência do seu pagamento.
+    3. Para dúvidas sobre esta fatura, entre em contato com financeiro@suaempresa.com.br.
     """
     
     elements.append(Paragraph(terms_text, normal_style))
     
-    # Build the PDF
+    # Constrói o PDF
     doc.build(elements)
     
-    # Get the PDF from the buffer
+    # Obtém o PDF do buffer
     buffer.seek(0)
     return buffer.getvalue()
 
-def get_invoice_download_link(invoice_data, link_text="Download PDF"):
+def get_invoice_download_link(invoice_data, link_text="Baixar PDF"):
     """
-    Generate a download link for the invoice PDF
+    Gera um link de download para o PDF da fatura
     
-    Parameters:
-    - invoice_data: Dictionary containing invoice information
-    - link_text: Text to display for the download link
+    Parâmetros:
+    - invoice_data: Dicionário contendo informações da fatura
+    - link_text: Texto a ser exibido para o link de download
     
-    Returns:
-    - str: HTML link for downloading the PDF
+    Retorna:
+    - str: Link HTML para download do PDF
     """
-    # Generate the PDF
+    # Gera o PDF
     pdf = create_invoice_pdf(invoice_data)
     
-    # Encode to base64
+    # Codifica para base64
     b64 = base64.b64encode(pdf).decode()
     
-    # Generate a safe filename
-    filename = f"Invoice_{invoice_data['invoice_number']}_{invoice_data['partner']}.pdf"
+    # Gera um nome de arquivo seguro
+    filename = f"Fatura_{invoice_data['invoice_number']}_{invoice_data['partner']}.pdf"
     filename = filename.replace(" ", "_")
     
-    # Create the download link
+    # Cria o link de download
     href = f'<a href="data:application/pdf;base64,{b64}" download="{filename}" style="text-decoration:none;padding:10px 15px;background-color:#3A174E;color:white;border-radius:5px;">{link_text}</a>'
     
     return href
 
 def generate_invoices_from_data(data):
     """
-    Generate invoices from processed data
+    Gera faturas a partir de dados processados
     
-    Parameters:
-    - data: DataFrame containing processed sell-out data
+    Parâmetros:
+    - data: DataFrame contendo dados de venda processados
     
-    Returns:
-    - List of generated invoice dictionaries
+    Retorna:
+    - Lista de dicionários de faturas geradas
     """
     from utils.data_processor import group_data_by_partner
     
-    # Group data by partner and month
+    # Agrupa dados por parceiro e mês
     grouped_data = group_data_by_partner(data)
     
-    # Generate invoices
+    # Gera faturas
     generated_invoices = []
     for group in grouped_data:
         invoice = {

@@ -4,12 +4,12 @@ import os
 from utils.data_processor import validate_data, process_data
 
 st.set_page_config(
-    page_title="Import Data - Invoice Management System",
+    page_title="Importar Dados - Sistema de Gerenciamento de Faturas",
     page_icon="📊",
     layout="wide"
 )
 
-# Custom styling
+# Estilo personalizado
 st.markdown("""
     <style>
     .main-header {
@@ -29,62 +29,62 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Header
-st.markdown('<div class="main-header">Import Data</div>', unsafe_allow_html=True)
-st.markdown('<div class="description">Upload and process sell-out data from partners (Masters)</div>', unsafe_allow_html=True)
+# Cabeçalho
+st.markdown('<div class="main-header">Importar Dados</div>', unsafe_allow_html=True)
+st.markdown('<div class="description">Faça upload e processe dados de venda dos parceiros (Masters)</div>', unsafe_allow_html=True)
 
-# File upload
-uploaded_file = st.file_uploader("Upload Excel file with sell-out data", type=["xlsx", "xls"])
+# Upload de arquivo
+uploaded_file = st.file_uploader("Faça upload do arquivo Excel com dados de venda", type=["xlsx", "xls"])
 
 if uploaded_file is not None:
     try:
-        # Read Excel file
+        # Lê o arquivo Excel
         df = pd.read_excel(uploaded_file)
         
-        # Show raw data
-        st.markdown('<div class="sub-header">Raw Data Preview</div>', unsafe_allow_html=True)
+        # Mostra os dados brutos
+        st.markdown('<div class="sub-header">Visualização dos Dados Brutos</div>', unsafe_allow_html=True)
         st.dataframe(df.head(10), use_container_width=True)
         
-        # Validate data
+        # Valida os dados
         is_valid, error_message = validate_data(df)
         
         if is_valid:
-            st.success("Data validation successful! The uploaded file has all required columns.")
+            st.success("Validação de dados bem-sucedida! O arquivo enviado possui todas as colunas necessárias.")
             
-            # Process data
-            if st.button("Process Data"):
-                with st.spinner("Processing data..."):
+            # Processa os dados
+            if st.button("Processar Dados"):
+                with st.spinner("Processando dados..."):
                     processed_data = process_data(df)
                     
-                    # Store in session state
+                    # Armazena no estado da sessão
                     st.session_state.imported_data = processed_data
                     
-                    # Display processed data
-                    st.markdown('<div class="sub-header">Processed Data</div>', unsafe_allow_html=True)
+                    # Exibe os dados processados
+                    st.markdown('<div class="sub-header">Dados Processados</div>', unsafe_allow_html=True)
                     st.dataframe(processed_data, use_container_width=True)
                     
-                    # Show summary
-                    st.markdown('<div class="sub-header">Data Summary</div>', unsafe_allow_html=True)
+                    # Mostra o resumo
+                    st.markdown('<div class="sub-header">Resumo dos Dados</div>', unsafe_allow_html=True)
                     
-                    # Create summary metrics
+                    # Cria métricas de resumo
                     col1, col2, col3, col4 = st.columns(4)
                     
                     with col1:
-                        st.metric("Total Records", len(processed_data))
+                        st.metric("Total de Registros", len(processed_data))
                     
                     with col2:
-                        st.metric("Total Amount", f"${processed_data['Amount'].sum():,.2f}")
+                        st.metric("Valor Total", f"R$ {processed_data['Amount'].sum():,.2f}")
                     
                     with col3:
-                        st.metric("Total Partners", processed_data['Partner'].nunique())
+                        st.metric("Total de Parceiros", processed_data['Partner'].nunique())
                     
                     with col4:
-                        st.metric("Total Countries", processed_data['Country'].nunique())
+                        st.metric("Total de Países", processed_data['Country'].nunique())
                     
-                    # Show detailed summary
-                    with st.expander("View Detailed Summary"):
-                        # By partner
-                        st.markdown("#### By Partner")
+                    # Mostra resumo detalhado
+                    with st.expander("Ver Resumo Detalhado"):
+                        # Por parceiro
+                        st.markdown("#### Por Parceiro")
                         partner_summary = processed_data.groupby('Partner').agg({
                             'Amount': 'sum',
                             'Royalty Amount': 'sum',
@@ -94,8 +94,8 @@ if uploaded_file is not None:
                         }).reset_index()
                         st.dataframe(partner_summary, use_container_width=True)
                         
-                        # By country
-                        st.markdown("#### By Country")
+                        # Por país
+                        st.markdown("#### Por País")
                         country_summary = processed_data.groupby('Country').agg({
                             'Amount': 'sum',
                             'Royalty Amount': 'sum',
@@ -105,57 +105,57 @@ if uploaded_file is not None:
                         }).reset_index()
                         st.dataframe(country_summary, use_container_width=True)
                     
-                    # Next steps
-                    st.success("Data processing complete! You can now proceed to generate invoices.")
-                    if st.button("Go to Generate Invoices"):
+                    # Próximos passos
+                    st.success("Processamento de dados concluído! Agora você pode prosseguir para gerar faturas.")
+                    if st.button("Ir para Gerar Faturas"):
                         st.switch_page("pages/02_Generate_Invoices.py")
         else:
-            st.error(f"Data validation failed: {error_message}")
+            st.error(f"Falha na validação de dados: {error_message}")
             
-            # Show required format
-            with st.expander("View Required Data Format"):
+            # Mostra o formato necessário
+            with st.expander("Ver Formato de Dados Necessário"):
                 st.markdown("""
-                The uploaded Excel file must contain the following columns:
+                O arquivo Excel enviado deve conter as seguintes colunas:
                 
-                - **Date**: Date of the transaction (required format: YYYY-MM-DD)
-                - **Partner**: Name of the partner/master
-                - **Country**: Country code (must be one of the supported countries)
-                - **Amount**: Numeric value representing the sell-out amount
-                - **Currency**: Currency code (e.g., USD, EUR, GBP)
+                - **Date**: Data da transação (formato necessário: AAAA-MM-DD)
+                - **Partner**: Nome do parceiro/master
+                - **Country**: Código do país (deve ser um dos países suportados)
+                - **Amount**: Valor numérico representando o valor de venda
+                - **Currency**: Código da moeda (ex: USD, EUR, BRL)
                 
-                Example:
+                Exemplo:
                 
                 | Date       | Partner      | Country | Amount  | Currency |
                 |------------|--------------|---------|---------|----------|
-                | 2023-10-01 | Partner Name | US      | 10000.0 | USD      |
-                | 2023-10-02 | Another Co   | UK      | 8500.5  | GBP      |
+                | 2023-10-01 | Nome Parceiro| BR      | 10000.0 | BRL      |
+                | 2023-10-02 | Outra Empresa| US      | 8500.5  | USD      |
                 
-                Make sure all required columns are present and data is in the correct format.
+                Certifique-se de que todas as colunas necessárias estejam presentes e os dados estejam no formato correto.
                 """)
     
     except Exception as e:
-        st.error(f"Error reading the file: {str(e)}")
-        st.info("Please ensure you're uploading a valid Excel file (.xlsx or .xls)")
+        st.error(f"Erro ao ler o arquivo: {str(e)}")
+        st.info("Por favor, certifique-se de que está enviando um arquivo Excel válido (.xlsx ou .xls)")
 else:
-    # Display sample data format
-    st.info("Please upload an Excel file with sell-out data to proceed.")
+    # Exibe o formato de amostra de dados
+    st.info("Por favor, faça upload de um arquivo Excel com dados de venda para prosseguir.")
     
-    with st.expander("View Required Data Format"):
+    with st.expander("Ver Formato de Dados Necessário"):
         st.markdown("""
-        The uploaded Excel file must contain the following columns:
+        O arquivo Excel enviado deve conter as seguintes colunas:
         
-        - **Date**: Date of the transaction (required format: YYYY-MM-DD)
-        - **Partner**: Name of the partner/master
-        - **Country**: Country code (must be one of the supported countries)
-        - **Amount**: Numeric value representing the sell-out amount
-        - **Currency**: Currency code (e.g., USD, EUR, GBP)
+        - **Date**: Data da transação (formato necessário: AAAA-MM-DD)
+        - **Partner**: Nome do parceiro/master
+        - **Country**: Código do país (deve ser um dos países suportados)
+        - **Amount**: Valor numérico representando o valor de venda
+        - **Currency**: Código da moeda (ex: USD, EUR, BRL)
         
-        Example:
+        Exemplo:
         
         | Date       | Partner      | Country | Amount  | Currency |
         |------------|--------------|---------|---------|----------|
-        | 2023-10-01 | Partner Name | US      | 10000.0 | USD      |
-        | 2023-10-02 | Another Co   | UK      | 8500.5  | GBP      |
+        | 2023-10-01 | Nome Parceiro| BR      | 10000.0 | BRL      |
+        | 2023-10-02 | Outra Empresa| US      | 8500.5  | USD      |
         
-        Make sure all required columns are present and data is in the correct format.
+        Certifique-se de que todas as colunas necessárias estejam presentes e os dados estejam no formato correto.
         """)

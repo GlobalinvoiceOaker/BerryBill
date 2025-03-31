@@ -1,15 +1,16 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils.payment_reconciliation import import_payment_data, reconcile_payments, find_potential_matches, manually_reconcile_payment
+from utils.data_processor import import_payment_data
+from utils.payment_reconciliation import reconcile_payments, find_potential_matches, manually_reconcile_payment
 
 st.set_page_config(
-    page_title="Reconcile Payments - Invoice Management System",
+    page_title="Reconciliar Pagamentos - Sistema de Gerenciamento de Faturas",
     page_icon="💰",
     layout="wide"
 )
 
-# Custom styling
+# Estilo personalizado
 st.markdown("""
     <style>
     .main-header {
@@ -29,173 +30,173 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Header
-st.markdown('<div class="main-header">Reconcile Payments</div>', unsafe_allow_html=True)
-st.markdown('<div class="description">Match bank statement payments with invoices</div>', unsafe_allow_html=True)
+# Cabeçalho
+st.markdown('<div class="main-header">Reconciliar Pagamentos</div>', unsafe_allow_html=True)
+st.markdown('<div class="description">Associe pagamentos do extrato bancário com faturas</div>', unsafe_allow_html=True)
 
-# Initialize session states if needed
+# Inicializa estados da sessão se necessário
 if 'payments' not in st.session_state:
     st.session_state.payments = None
 if 'reconciled_invoices' not in st.session_state:
     st.session_state.reconciled_invoices = []
 
-# Check if invoices are generated
+# Verifica se as faturas foram geradas
 if 'invoices' not in st.session_state or not st.session_state.invoices:
-    st.warning("No invoices generated. Please generate invoices first.")
-    if st.button("Go to Generate Invoices"):
+    st.warning("Nenhuma fatura gerada. Por favor, gere faturas primeiro.")
+    if st.button("Ir para Gerar Faturas"):
         st.switch_page("pages/02_Generate_Invoices.py")
 else:
-    # Payment import section
-    st.markdown('<div class="sub-header">Import Bank Statement</div>', unsafe_allow_html=True)
+    # Seção de importação de pagamentos
+    st.markdown('<div class="sub-header">Importar Extrato Bancário</div>', unsafe_allow_html=True)
     
-    uploaded_file = st.file_uploader("Upload bank statement (CSV or Excel)", type=["csv", "xlsx", "xls"])
+    uploaded_file = st.file_uploader("Faça upload do extrato bancário (CSV ou Excel)", type=["csv", "xlsx", "xls"])
     
     if uploaded_file is not None:
-        # Import payment data
+        # Importa dados de pagamento
         payments_df, is_valid, error_message = import_payment_data(uploaded_file)
         
         if is_valid:
-            st.success("Bank statement imported successfully!")
+            st.success("Extrato bancário importado com sucesso!")
             
-            # Store in session state
+            # Armazena no estado da sessão
             st.session_state.payments = payments_df
             
-            # Display payment data
+            # Exibe dados de pagamento
             st.dataframe(payments_df.head(10), use_container_width=True)
             
-            # Summary metrics
+            # Métricas de resumo
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                st.metric("Total Transactions", len(payments_df))
+                st.metric("Total de Transações", len(payments_df))
             
             with col2:
                 positive_amounts = payments_df[payments_df['Amount'] > 0]['Amount'].sum()
-                st.metric("Total Inflows", f"${positive_amounts:,.2f}")
+                st.metric("Total de Entradas", f"R$ {positive_amounts:,.2f}")
             
             with col3:
                 negative_amounts = payments_df[payments_df['Amount'] < 0]['Amount'].sum()
-                st.metric("Total Outflows", f"${abs(negative_amounts):,.2f}")
+                st.metric("Total de Saídas", f"R$ {abs(negative_amounts):,.2f}")
             
-            # Reconciliation section
-            st.markdown('<div class="sub-header">Reconcile Payments</div>', unsafe_allow_html=True)
+            # Seção de reconciliação
+            st.markdown('<div class="sub-header">Reconciliar Pagamentos</div>', unsafe_allow_html=True)
             
-            if st.button("Match Payments with Invoices"):
-                with st.spinner("Reconciling payments..."):
-                    # Filter only incoming payments (positive amounts)
+            if st.button("Associar Pagamentos com Faturas"):
+                with st.spinner("Reconciliando pagamentos..."):
+                    # Filtra apenas pagamentos de entrada (valores positivos)
                     incoming_payments = payments_df[payments_df['Amount'] > 0]
                     
-                    # Reconcile payments
+                    # Reconcilia pagamentos
                     reconciled_payments, updated_invoices = reconcile_payments(incoming_payments, st.session_state.invoices)
                     
-                    # Store reconciled data
+                    # Armazena dados reconciliados
                     st.session_state.reconciled_payments = reconciled_payments
                     st.session_state.invoices = updated_invoices
                     
-                    st.success("Payments reconciled successfully!")
+                    st.success("Pagamentos reconciliados com sucesso!")
             
-            # Display reconciliation results
+            # Exibe resultados da reconciliação
             if 'reconciled_payments' in st.session_state and st.session_state.reconciled_payments:
-                # Show matched payments
-                st.markdown("#### Matched Payments")
+                # Mostra pagamentos associados
+                st.markdown("#### Pagamentos Associados")
                 
                 matched_payments = [p for p in st.session_state.reconciled_payments if p['reconciled']]
                 if matched_payments:
                     matched_df = pd.DataFrame([
                         {
-                            "Date": p['Date'].strftime("%Y-%m-%d") if hasattr(p['Date'], 'strftime') else p['Date'],
-                            "Amount": f"${p['Amount']:,.2f}",
-                            "Description": p['Description'],
-                            "Reference": p['Reference'],
-                            "Matched Invoice": p['matched_invoice'],
-                            "Confidence": f"{p['match_score']}%"
+                            "Data": p['Date'].strftime("%d/%m/%Y") if hasattr(p['Date'], 'strftime') else p['Date'],
+                            "Valor": f"R$ {p['Amount']:,.2f}",
+                            "Descrição": p['Description'],
+                            "Referência": p['Reference'],
+                            "Fatura Associada": p['matched_invoice'],
+                            "Confiança": f"{p['match_score']}%"
                         } for p in matched_payments
                     ])
                     
                     st.dataframe(matched_df, use_container_width=True)
                 else:
-                    st.info("No payments were automatically matched with invoices.")
+                    st.info("Nenhum pagamento foi automaticamente associado às faturas.")
                 
-                # Show unmatched payments
-                st.markdown("#### Unmatched Payments")
+                # Mostra pagamentos não associados
+                st.markdown("#### Pagamentos Não Associados")
                 
                 unmatched_payments = [p for p in st.session_state.reconciled_payments if not p['reconciled']]
                 if unmatched_payments:
                     unmatched_df = pd.DataFrame([
                         {
-                            "Date": p['Date'].strftime("%Y-%m-%d") if hasattr(p['Date'], 'strftime') else p['Date'],
-                            "Amount": f"${p['Amount']:,.2f}",
-                            "Description": p['Description'],
-                            "Reference": p['Reference']
+                            "Data": p['Date'].strftime("%d/%m/%Y") if hasattr(p['Date'], 'strftime') else p['Date'],
+                            "Valor": f"R$ {p['Amount']:,.2f}",
+                            "Descrição": p['Description'],
+                            "Referência": p['Reference']
                         } for p in unmatched_payments
                     ])
                     
                     st.dataframe(unmatched_df, use_container_width=True)
                     
-                    # Manual reconciliation
-                    st.markdown("#### Manual Reconciliation")
+                    # Reconciliação manual
+                    st.markdown("#### Reconciliação Manual")
                     
-                    # Select unmatched payment
+                    # Seleciona pagamento não associado
                     selected_payment_idx = st.selectbox(
-                        "Select an unmatched payment",
+                        "Selecione um pagamento não associado",
                         options=range(len(unmatched_payments)),
-                        format_func=lambda i: f"{unmatched_payments[i]['Date'].strftime('%Y-%m-%d') if hasattr(unmatched_payments[i]['Date'], 'strftime') else unmatched_payments[i]['Date']} - ${unmatched_payments[i]['Amount']:,.2f} - {unmatched_payments[i]['Description'][:30]}..."
+                        format_func=lambda i: f"{unmatched_payments[i]['Date'].strftime('%d/%m/%Y') if hasattr(unmatched_payments[i]['Date'], 'strftime') else unmatched_payments[i]['Date']} - R$ {unmatched_payments[i]['Amount']:,.2f} - {unmatched_payments[i]['Description'][:30]}..."
                     )
                     
                     if selected_payment_idx is not None:
                         selected_payment = unmatched_payments[selected_payment_idx]
                         
-                        # Show payment details
-                        st.markdown(f"**Payment Date:** {selected_payment['Date'].strftime('%Y-%m-%d') if hasattr(selected_payment['Date'], 'strftime') else selected_payment['Date']}")
-                        st.markdown(f"**Amount:** ${selected_payment['Amount']:,.2f}")
-                        st.markdown(f"**Description:** {selected_payment['Description']}")
-                        st.markdown(f"**Reference:** {selected_payment['Reference']}")
+                        # Mostra detalhes do pagamento
+                        st.markdown(f"**Data do Pagamento:** {selected_payment['Date'].strftime('%d/%m/%Y') if hasattr(selected_payment['Date'], 'strftime') else selected_payment['Date']}")
+                        st.markdown(f"**Valor:** R$ {selected_payment['Amount']:,.2f}")
+                        st.markdown(f"**Descrição:** {selected_payment['Description']}")
+                        st.markdown(f"**Referência:** {selected_payment['Reference']}")
                         
-                        # Find potential matches for the selected payment
+                        # Encontra possíveis correspondências para o pagamento selecionado
                         potential_matches = find_potential_matches(selected_payment, st.session_state.invoices)
                         
                         if potential_matches:
-                            st.markdown("**Potential Matching Invoices:**")
+                            st.markdown("**Possíveis Faturas Correspondentes:**")
                             
-                            # Convert potential matches to DataFrame
+                            # Converte possíveis correspondências para DataFrame
                             potential_matches_df = pd.DataFrame([
                                 {
-                                    "Invoice #": match['invoice']['invoice_number'],
-                                    "Partner": match['invoice']['partner'],
-                                    "Total Amount": f"{match['invoice']['currency']} {match['invoice']['total_amount']:,.2f}",
-                                    "Remaining": f"{match['invoice']['currency']} {match['remaining_amount']:,.2f}",
-                                    "Match Score": f"{match['score']}%",
-                                    "Reasons": ", ".join(match['reasons'])
+                                    "Fatura #": match['invoice']['invoice_number'],
+                                    "Parceiro": match['invoice']['partner'],
+                                    "Valor Total": f"{match['invoice']['currency']} {match['invoice']['total_amount']:,.2f}",
+                                    "Restante": f"{match['invoice']['currency']} {match['remaining_amount']:,.2f}",
+                                    "Pontuação": f"{match['score']}%",
+                                    "Motivos": ", ".join(match['reasons'])
                                 } for match in potential_matches
                             ])
                             
-                            # Display potential matches
+                            # Exibe possíveis correspondências
                             st.dataframe(potential_matches_df, use_container_width=True)
                             
-                            # Select an invoice to match
+                            # Seleciona uma fatura para associar
                             selected_invoice_idx = st.selectbox(
-                                "Select an invoice to match with this payment",
+                                "Selecione uma fatura para associar a este pagamento",
                                 options=range(len(potential_matches)),
-                                format_func=lambda i: f"{potential_matches[i]['invoice']['invoice_number']} - {potential_matches[i]['invoice']['partner']} (${potential_matches[i]['remaining_amount']:,.2f})"
+                                format_func=lambda i: f"{potential_matches[i]['invoice']['invoice_number']} - {potential_matches[i]['invoice']['partner']} (R$ {potential_matches[i]['remaining_amount']:,.2f})"
                             )
                             
                             if selected_invoice_idx is not None:
                                 selected_match = potential_matches[selected_invoice_idx]
                                 selected_invoice = selected_match['invoice']
                                 
-                                # Payment amount options
+                                # Opções de valor do pagamento
                                 payment_amount = st.number_input(
-                                    "Payment amount to apply",
+                                    "Valor do pagamento a aplicar",
                                     min_value=0.01,
                                     max_value=float(selected_payment['Amount']),
                                     value=min(float(selected_payment['Amount']), selected_match['remaining_amount']),
                                     step=0.01
                                 )
                                 
-                                # Apply payment
-                                if st.button("Apply Payment"):
-                                    with st.spinner("Applying payment..."):
-                                        # Update the payment and invoices
+                                # Aplica pagamento
+                                if st.button("Aplicar Pagamento"):
+                                    with st.spinner("Aplicando pagamento..."):
+                                        # Atualiza o pagamento e as faturas
                                         updated_payment, updated_invoices = manually_reconcile_payment(
                                             selected_payment,
                                             selected_invoice,
@@ -203,8 +204,8 @@ else:
                                             st.session_state.invoices
                                         )
                                         
-                                        # Update session state
-                                        # Find the payment index in the original list
+                                        # Atualiza o estado da sessão
+                                        # Encontra o índice do pagamento na lista original
                                         payment_idx = next((i for i, p in enumerate(st.session_state.reconciled_payments) 
                                                           if p['Date'] == updated_payment['Date'] and 
                                                           p['Amount'] == updated_payment['Amount'] and
@@ -216,116 +217,116 @@ else:
                                         
                                         st.session_state.invoices = updated_invoices
                                         
-                                        st.success(f"Payment of ${payment_amount:,.2f} applied to invoice {selected_invoice['invoice_number']}!")
+                                        st.success(f"Pagamento de R$ {payment_amount:,.2f} aplicado à fatura {selected_invoice['invoice_number']}!")
                                         st.rerun()
                         else:
-                            st.info("No potential matching invoices found for this payment.")
+                            st.info("Não foram encontradas faturas correspondentes para este pagamento.")
                 else:
-                    st.info("All payments have been matched with invoices.")
+                    st.info("Todos os pagamentos foram associados às faturas.")
             
-            # Invoice status section
-            st.markdown('<div class="sub-header">Invoice Payment Status</div>', unsafe_allow_html=True)
+            # Seção de status de pagamento das faturas
+            st.markdown('<div class="sub-header">Status de Pagamento das Faturas</div>', unsafe_allow_html=True)
             
-            # Convert to DataFrame for easier display
+            # Converte para DataFrame para exibição mais fácil
             invoice_status_df = pd.DataFrame([
                 {
-                    "Invoice #": inv['invoice_number'],
-                    "Partner": inv['partner'],
-                    "Country": inv['country'],
-                    "Period": f"{inv['month_name']} {inv['year']}",
-                    "Total Amount": f"{inv['currency']} {inv['total_amount']:,.2f}",
-                    "Paid Amount": f"{inv['currency']} {inv.get('payment_amount', 0):,.2f}",
-                    "Remaining": f"{inv['currency']} {inv['total_amount'] - inv.get('payment_amount', 0):,.2f}",
-                    "Status": "Paid" if inv.get('paid', False) else "Partially Paid" if inv.get('payment_amount', 0) > 0 else "Unpaid",
-                    "Payment Date": inv.get('payment_date', '').strftime("%Y-%m-%d") if hasattr(inv.get('payment_date', ''), 'strftime') else inv.get('payment_date', '')
+                    "Fatura #": inv['invoice_number'],
+                    "Parceiro": inv['partner'],
+                    "País": inv['country'],
+                    "Período": f"{inv['month_name']} {inv['year']}",
+                    "Valor Total": f"{inv['currency']} {inv['total_amount']:,.2f}",
+                    "Valor Pago": f"{inv['currency']} {inv.get('payment_amount', 0):,.2f}",
+                    "Valor Restante": f"{inv['currency']} {inv['total_amount'] - inv.get('payment_amount', 0):,.2f}",
+                    "Status": "Paga" if inv.get('paid', False) else "Parcialmente Paga" if inv.get('payment_amount', 0) > 0 else "Não Paga",
+                    "Data de Pagamento": inv.get('payment_date', '').strftime("%d/%m/%Y") if hasattr(inv.get('payment_date', ''), 'strftime') else inv.get('payment_date', '')
                 } for inv in st.session_state.invoices
             ])
             
             st.dataframe(invoice_status_df, use_container_width=True)
             
-            # Summary metrics
+            # Métricas de resumo
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
                 total_invoiced = sum(inv['total_amount'] for inv in st.session_state.invoices)
-                st.metric("Total Invoiced", f"${total_invoiced:,.2f}")
+                st.metric("Total Faturado", f"R$ {total_invoiced:,.2f}")
             
             with col2:
                 total_paid = sum(inv.get('payment_amount', 0) for inv in st.session_state.invoices)
-                st.metric("Total Paid", f"${total_paid:,.2f}")
+                st.metric("Total Pago", f"R$ {total_paid:,.2f}")
             
             with col3:
-                st.metric("Remaining", f"${total_invoiced - total_paid:,.2f}")
+                st.metric("Valor Restante", f"R$ {total_invoiced - total_paid:,.2f}")
             
             with col4:
                 paid_ratio = (total_paid / total_invoiced * 100) if total_invoiced > 0 else 0
-                st.metric("Payment Ratio", f"{paid_ratio:.1f}%")
+                st.metric("Taxa de Pagamento", f"{paid_ratio:.1f}%")
             
-            # Next steps
-            st.markdown("#### Next Steps")
-            if st.button("Go to Financial Reports"):
+            # Próximos passos
+            st.markdown("#### Próximos Passos")
+            if st.button("Ir para Relatórios Financeiros"):
                 st.switch_page("pages/05_Financial_Reports.py")
         else:
-            st.error(f"Error importing bank statement: {error_message}")
+            st.error(f"Erro ao importar extrato bancário: {error_message}")
             
-            # Show required format
-            with st.expander("View Required Data Format"):
+            # Mostra o formato necessário
+            with st.expander("Ver Formato de Dados Necessário"):
                 st.markdown("""
-                The uploaded bank statement must contain the following columns:
+                O extrato bancário enviado deve conter as seguintes colunas:
                 
-                - **Date**: Date of the transaction (required format: YYYY-MM-DD)
-                - **Amount**: Numeric value (positive for incoming payments, negative for outgoing)
-                - **Description**: Description or memo of the transaction
-                - **Reference**: Reference number or additional information
+                - **Date**: Data da transação (formato necessário: AAAA-MM-DD)
+                - **Amount**: Valor numérico (positivo para entradas de pagamento, negativo para saídas)
+                - **Description**: Descrição ou memorando da transação
+                - **Reference**: Número de referência ou informações adicionais
                 
-                Example:
+                Exemplo:
                 
                 | Date       | Amount   | Description                | Reference    |
                 |------------|----------|----------------------------|--------------|
-                | 2023-10-15 | 5000.0   | Payment from Partner A     | INV-123      |
-                | 2023-10-16 | -2500.0  | Office rent payment        | RENT-OCT     |
+                | 2023-10-15 | 5000.0   | Pagamento do Parceiro A    | INV-123      |
+                | 2023-10-16 | -2500.0  | Pagamento de aluguel       | ALUG-OUT     |
                 
-                Make sure all required columns are present and data is in the correct format.
+                Certifique-se de que todas as colunas necessárias estejam presentes e os dados estejam no formato correto.
                 """)
     else:
-        # Display sample data format
-        st.info("Please upload a bank statement file (CSV or Excel) to proceed.")
+        # Exibe o formato de amostra de dados
+        st.info("Por favor, faça upload de um arquivo de extrato bancário (CSV ou Excel) para prosseguir.")
         
-        with st.expander("View Required Data Format"):
+        with st.expander("Ver Formato de Dados Necessário"):
             st.markdown("""
-            The uploaded bank statement must contain the following columns:
+            O extrato bancário enviado deve conter as seguintes colunas:
             
-            - **Date**: Date of the transaction (required format: YYYY-MM-DD)
-            - **Amount**: Numeric value (positive for incoming payments, negative for outgoing)
-            - **Description**: Description or memo of the transaction
-            - **Reference**: Reference number or additional information
+            - **Date**: Data da transação (formato necessário: AAAA-MM-DD)
+            - **Amount**: Valor numérico (positivo para entradas de pagamento, negativo para saídas)
+            - **Description**: Descrição ou memorando da transação
+            - **Reference**: Número de referência ou informações adicionais
             
-            Example:
+            Exemplo:
             
             | Date       | Amount   | Description                | Reference    |
             |------------|----------|----------------------------|--------------|
-            | 2023-10-15 | 5000.0   | Payment from Partner A     | INV-123      |
-            | 2023-10-16 | -2500.0  | Office rent payment        | RENT-OCT     |
+            | 2023-10-15 | 5000.0   | Pagamento do Parceiro A    | INV-123      |
+            | 2023-10-16 | -2500.0  | Pagamento de aluguel       | ALUG-OUT     |
             
-            Make sure all required columns are present and data is in the correct format.
+            Certifique-se de que todas as colunas necessárias estejam presentes e os dados estejam no formato correto.
             """)
         
-        # Show current invoice status
+        # Mostra o status atual das faturas
         if st.session_state.invoices:
-            st.markdown('<div class="sub-header">Current Invoice Status</div>', unsafe_allow_html=True)
+            st.markdown('<div class="sub-header">Status Atual das Faturas</div>', unsafe_allow_html=True)
             
-            # Convert to DataFrame for easier display
+            # Converte para DataFrame para exibição mais fácil
             invoice_status_df = pd.DataFrame([
                 {
-                    "Invoice #": inv['invoice_number'],
-                    "Partner": inv['partner'],
-                    "Country": inv['country'],
-                    "Period": f"{inv['month_name']} {inv['year']}",
-                    "Total Amount": f"{inv['currency']} {inv['total_amount']:,.2f}",
-                    "Paid Amount": f"{inv['currency']} {inv.get('payment_amount', 0):,.2f}",
-                    "Remaining": f"{inv['currency']} {inv['total_amount'] - inv.get('payment_amount', 0):,.2f}",
-                    "Status": "Paid" if inv.get('paid', False) else "Partially Paid" if inv.get('payment_amount', 0) > 0 else "Unpaid",
-                    "Payment Date": inv.get('payment_date', '').strftime("%Y-%m-%d") if hasattr(inv.get('payment_date', ''), 'strftime') else inv.get('payment_date', '')
+                    "Fatura #": inv['invoice_number'],
+                    "Parceiro": inv['partner'],
+                    "País": inv['country'],
+                    "Período": f"{inv['month_name']} {inv['year']}",
+                    "Valor Total": f"{inv['currency']} {inv['total_amount']:,.2f}",
+                    "Valor Pago": f"{inv['currency']} {inv.get('payment_amount', 0):,.2f}",
+                    "Valor Restante": f"{inv['currency']} {inv['total_amount'] - inv.get('payment_amount', 0):,.2f}",
+                    "Status": "Paga" if inv.get('paid', False) else "Parcialmente Paga" if inv.get('payment_amount', 0) > 0 else "Não Paga",
+                    "Data de Pagamento": inv.get('payment_date', '').strftime("%d/%m/%Y") if hasattr(inv.get('payment_date', ''), 'strftime') else inv.get('payment_date', '')
                 } for inv in st.session_state.invoices
             ])
             

@@ -41,11 +41,39 @@ st.markdown("Configure royalty rates, ad fund rates, and tax rates for each coun
 # Load current settings
 country_settings = load_country_settings()
 
+# Mapeamento de códigos de país para nomes completos
+country_names = {
+    'BR': 'Brasil',
+    'US': 'Estados Unidos',
+    'ES': 'Espanha',
+    'PT': 'Portugal',
+    'MX': 'México',
+    'CO': 'Colômbia',
+    'AR': 'Argentina',
+    'CL': 'Chile',
+    'PE': 'Peru',
+    'IT': 'Itália',
+    'UK': 'Reino Unido',
+    'FR': 'França',
+    'DE': 'Alemanha',
+    'AU': 'Austrália',
+    'NZ': 'Nova Zelândia',
+    'JP': 'Japão',
+    'CN': 'China',
+    'AE': 'Emirados Árabes Unidos',
+    'SA': 'Arábia Saudita',
+    'KW': 'Kuwait',
+    'QA': 'Qatar',
+}
+
 # Convert to DataFrame for easier editing
 settings_data = []
-for country, rates in country_settings.items():
+for country_code, rates in country_settings.items():
+    # Obter nome completo do país ou usar o código se não estiver no mapeamento
+    country_name = country_names.get(country_code, country_code)
     settings_data.append({
-        "Country": country,
+        "Country Code": country_code,  # Mantendo o código para uso interno
+        "Country": country_name,      # Nome completo para exibição
         "Royalty Rate (%)": rates["royalty_rate"] * 100,
         "Ad Fund Rate (%)": rates["ad_fund_rate"] * 100,
         "Tax Rate (%)": rates["tax_rate"] * 100
@@ -58,7 +86,8 @@ edited_df = st.data_editor(
     settings_df,
     use_container_width=True,
     column_config={
-        "Country": st.column_config.TextColumn("Country Code"),
+        "Country Code": st.column_config.TextColumn("Country Code", disabled=True),
+        "Country": st.column_config.TextColumn("Country Name", disabled=True),
         "Royalty Rate (%)": st.column_config.NumberColumn(
             "Royalty Rate (%)",
             min_value=0.0,
@@ -110,7 +139,9 @@ with st.expander("Add New Country"):
                 # Save settings
                 save_country_settings(country_settings)
                 
-                st.success(f"Country {new_country_upper} added successfully!")
+                # Obter o nome completo do país, se disponível
+                country_name = country_names.get(new_country_upper, new_country_upper)
+                st.success(f"País {country_name} ({new_country_upper}) adicionado com sucesso!")
                 st.rerun()
 
 # Save settings button
@@ -118,8 +149,9 @@ if st.button("Save Settings"):
     # Update settings from edited DataFrame
     updated_settings = {}
     for _, row in edited_df.iterrows():
-        country = row["Country"]
-        updated_settings[country] = {
+        # Importante: Usamos o código do país (não o nome completo) ao salvar as configurações
+        country_code = row["Country Code"]
+        updated_settings[country_code] = {
             "royalty_rate": row["Royalty Rate (%)"] / 100,
             "ad_fund_rate": row["Ad Fund Rate (%)"] / 100,
             "tax_rate": row["Tax Rate (%)"] / 100

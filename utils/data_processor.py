@@ -4,33 +4,85 @@ import os
 import streamlit as st
 from datetime import datetime
 
+# Arquivo para armazenar configurações do país
+COUNTRY_SETTINGS_FILE = "data/country_settings.json"
+
+def ensure_data_dir():
+    """
+    Garante que o diretório de dados existe
+    """
+    if not os.path.exists("data"):
+        os.makedirs("data")
+
 def load_country_settings():
     """
     Carrega as configurações dos países do arquivo JSON
     """
-    try:
-        with open('data/country_settings.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        # Retorna configurações padrão se o arquivo não existir
-        return {
-            "US": {"royalty_rate": 0.05, "ad_fund_rate": 0.02, "tax_rate": 0.0},
-            "UK": {"royalty_rate": 0.06, "ad_fund_rate": 0.02, "tax_rate": 0.20},
-            "BR": {"royalty_rate": 0.06, "ad_fund_rate": 0.02, "tax_rate": 0.17},
-            "CA": {"royalty_rate": 0.05, "ad_fund_rate": 0.02, "tax_rate": 0.05},
-            "DE": {"royalty_rate": 0.05, "ad_fund_rate": 0.02, "tax_rate": 0.19},
-            "FR": {"royalty_rate": 0.05, "ad_fund_rate": 0.02, "tax_rate": 0.20},
-            "ES": {"royalty_rate": 0.05, "ad_fund_rate": 0.02, "tax_rate": 0.21}
+    ensure_data_dir()
+    
+    if not os.path.exists(COUNTRY_SETTINGS_FILE):
+        # Configurações padrão
+        default_settings = {
+            "Brazil": {
+                "royalty_rate": 8.0,
+                "ad_fund_rate": 2.0,
+                "tax_rate": 15.0,
+                "currency": "BRL",
+                "exchange_rate": 5.0,
+                "stores": {
+                    "default": {
+                        "royalty_rate": 8.0,
+                        "ad_fund_rate": 2.0
+                    }
+                }
+            },
+            "USA": {
+                "royalty_rate": 6.0,
+                "ad_fund_rate": 1.5,
+                "tax_rate": 0.0,
+                "currency": "USD",
+                "exchange_rate": 1.0,
+                "stores": {
+                    "default": {
+                        "royalty_rate": 6.0,
+                        "ad_fund_rate": 1.5
+                    }
+                }
+            },
+            "Mexico": {
+                "royalty_rate": 7.0,
+                "ad_fund_rate": 2.0,
+                "tax_rate": 16.0,
+                "currency": "MXN",
+                "exchange_rate": 17.5,
+                "stores": {
+                    "default": {
+                        "royalty_rate": 7.0,
+                        "ad_fund_rate": 2.0
+                    }
+                }
+            }
         }
+        
+        with open(COUNTRY_SETTINGS_FILE, 'w') as f:
+            json.dump(default_settings, f, indent=4)
+        
+        return default_settings
+    
+    try:
+        with open(COUNTRY_SETTINGS_FILE, 'r') as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        # Em caso de erro no arquivo, retornar configurações padrão
+        return {}
 
 def save_country_settings(settings):
     """
     Salva as configurações dos países no arquivo JSON
     """
-    # Cria o diretório de dados se não existir
-    os.makedirs('data', exist_ok=True)
+    ensure_data_dir()
     
-    with open('data/country_settings.json', 'w') as f:
+    with open(COUNTRY_SETTINGS_FILE, 'w') as f:
         json.dump(settings, f, indent=4)
 
 def validate_data(df):
@@ -40,37 +92,32 @@ def validate_data(df):
     Retorna:
     - (bool, str): (é_válido, mensagem_de_erro)
     """
-    required_columns = ['Date', 'Partner', 'Country', 'Amount', 'Currency']
-    
-    # Verifica se as colunas obrigatórias existem
+    # Verificar colunas obrigatórias
+    required_columns = ['Date', 'Country', 'Partner', 'Store', 'Sales']
     missing_columns = [col for col in required_columns if col not in df.columns]
+    
     if missing_columns:
         return False, f"Colunas obrigatórias ausentes: {', '.join(missing_columns)}"
     
-    # Verifica valores ausentes em campos obrigatórios
-    for col in required_columns:
-        if df[col].isnull().any():
-            return False, f"Valores ausentes na coluna '{col}'"
-    
-    # Verifica se as datas são válidas
+    # Verificar tipos de dados
     try:
-        pd.to_datetime(df['Date'])
+        # Converter coluna de data
+        df['Date'] = pd.to_datetime(df['Date'])
     except:
-        return False, "Formato de data inválido na coluna 'Date'"
+        return False, "Formato de data inválido. Utilize o formato YYYY-MM-DD."
     
-    # Verifica se os valores são numéricos
-    try:
-        pd.to_numeric(df['Amount'])
-    except:
-        return False, "Valores numéricos inválidos na coluna 'Amount'"
+    # Verificar valores numéricos para vendas
+    if not pd.to_numeric(df['Sales'], errors='coerce').notnull().all():
+        return False, "Valores de vendas inválidos. Utilize apenas valores numéricos."
     
-    # Verifica se os países são suportados
+    # Validar países
     country_settings = load_country_settings()
-    unsupported_countries = df[~df['Country'].isin(country_settings.keys())]['Country'].unique()
-    if len(unsupported_countries) > 0:
-        return False, f"Países não suportados encontrados: {', '.join(unsupported_countries)}"
+    unknown_countries = set(df['Country']) - set(country_settings.keys())
     
-    return True, ""
+    if unknown_countries:
+        return False, f"Países desconhecidos no arquivo: {', '.join(unknown_countries)}. Configure-os primeiro na seção Configurações."
+    
+    return True, "Dados válidos."
 
 def process_data(df):
     """
@@ -79,40 +126,80 @@ def process_data(df):
     Retorna:
     - DataFrame com colunas calculadas adicionais
     """
-    # Carrega configurações dos países
+    # Carregar configurações dos países
     country_settings = load_country_settings()
     
-    # Converte coluna de data para datetime
-    df['Date'] = pd.to_datetime(df['Date'])
+    # Criar cópia do DataFrame para evitar modificar o original
+    processed_df = df.copy()
     
-    # Garante que Amount é numérico
-    df['Amount'] = pd.to_numeric(df['Amount'])
+    # Converter colunas
+    processed_df['Date'] = pd.to_datetime(processed_df['Date'])
+    processed_df['Sales'] = pd.to_numeric(processed_df['Sales'])
     
-    # Cria novas colunas para cálculos
-    df['Royalty Rate'] = df['Country'].map({country: data['royalty_rate'] for country, data in country_settings.items()})
-    df['Ad Fund Rate'] = df['Country'].map({country: data['ad_fund_rate'] for country, data in country_settings.items()})
-    df['Tax Rate'] = df['Country'].map({country: data['tax_rate'] for country, data in country_settings.items()})
+    # Adicionar colunas de mês e ano
+    processed_df['Month'] = processed_df['Date'].dt.month
+    processed_df['Year'] = processed_df['Date'].dt.year
+    processed_df['Month_Name'] = processed_df['Date'].dt.strftime('%B')
     
-    # Calcula valores
-    df['Royalty Amount'] = df['Amount'] * df['Royalty Rate']
-    df['Ad Fund Amount'] = df['Amount'] * df['Ad Fund Rate']
-    df['Subtotal'] = df['Royalty Amount'] + df['Ad Fund Amount']
-    df['Tax Amount'] = df['Subtotal'] * df['Tax Rate']
-    df['Total Amount'] = df['Subtotal'] + df['Tax Amount']
+    # Inicializar colunas de cálculos
+    processed_df['Royalty_Rate'] = 0.0
+    processed_df['Ad_Fund_Rate'] = 0.0
+    processed_df['Tax_Rate'] = 0.0
+    processed_df['Currency'] = ''
+    processed_df['Exchange_Rate'] = 0.0
+    processed_df['Royalty_Amount'] = 0.0
+    processed_df['Ad_Fund_Amount'] = 0.0
+    processed_df['Tax_Amount'] = 0.0
+    processed_df['Total_Amount'] = 0.0
+    processed_df['Amount_USD'] = 0.0
     
-    # Formata valores para 2 casas decimais
-    for col in ['Royalty Amount', 'Ad Fund Amount', 'Subtotal', 'Tax Amount', 'Total Amount']:
-        df[col] = df[col].round(2)
+    # Processar cada linha com base no país e, se disponível, na loja específica
+    for idx, row in processed_df.iterrows():
+        country = row['Country']
+        store = row['Store']
+        
+        if country in country_settings:
+            country_config = country_settings[country]
+            
+            # Verificar se a loja específica tem configurações personalizadas
+            if 'stores' in country_config and store in country_config['stores']:
+                store_config = country_config['stores'][store]
+                royalty_rate = store_config.get('royalty_rate', country_config['royalty_rate'])
+                ad_fund_rate = store_config.get('ad_fund_rate', country_config['ad_fund_rate'])
+            else:
+                # Usar configuração padrão da loja se disponível, caso contrário usa a do país
+                if 'stores' in country_config and 'default' in country_config['stores']:
+                    default_store = country_config['stores']['default']
+                    royalty_rate = default_store.get('royalty_rate', country_config['royalty_rate'])
+                    ad_fund_rate = default_store.get('ad_fund_rate', country_config['ad_fund_rate'])
+                else:
+                    royalty_rate = country_config['royalty_rate']
+                    ad_fund_rate = country_config['ad_fund_rate']
+            
+            # Preencher dados do país
+            processed_df.at[idx, 'Royalty_Rate'] = royalty_rate
+            processed_df.at[idx, 'Ad_Fund_Rate'] = ad_fund_rate
+            processed_df.at[idx, 'Tax_Rate'] = country_config['tax_rate']
+            processed_df.at[idx, 'Currency'] = country_config['currency']
+            processed_df.at[idx, 'Exchange_Rate'] = country_config['exchange_rate']
+            
+            # Calcular valores
+            sales = row['Sales']
+            royalty_amount = sales * (royalty_rate / 100)
+            ad_fund_amount = sales * (ad_fund_rate / 100)
+            subtotal = royalty_amount + ad_fund_amount
+            tax_amount = subtotal * (country_config['tax_rate'] / 100)
+            total_amount = subtotal + tax_amount
+            amount_usd = total_amount / country_config['exchange_rate']
+            
+            # Preencher resultados dos cálculos
+            processed_df.at[idx, 'Royalty_Amount'] = royalty_amount
+            processed_df.at[idx, 'Ad_Fund_Amount'] = ad_fund_amount
+            processed_df.at[idx, 'Tax_Amount'] = tax_amount
+            processed_df.at[idx, 'Total_Amount'] = total_amount
+            processed_df.at[idx, 'Amount_USD'] = amount_usd
     
-    # Adiciona colunas de ano e mês para agrupamento mais fácil
-    df['Year'] = df['Date'].dt.year
-    df['Month'] = df['Date'].dt.month
-    df['Month Name'] = df['Date'].dt.strftime('%B')
-    
-    # Adiciona coluna de status de geração de fatura
-    df['Invoice Generated'] = False
-    
-    return df
+    return processed_df
 
 def group_data_by_partner(df):
     """
@@ -121,36 +208,58 @@ def group_data_by_partner(df):
     Retorna:
     - Lista de dicionários com dados agrupados
     """
-    grouped_data = []
+    # Garantir que as colunas necessárias existam
+    if not all(col in df.columns for col in ['Partner', 'Country', 'Month', 'Year', 'Month_Name', 'Total_Amount', 'Amount_USD', 'Currency']):
+        return []
     
-    # Agrupa por parceiro, país, ano e mês
-    for (partner, country, year, month), group_df in df.groupby(['Partner', 'Country', 'Year', 'Month']):
-        month_name = group_df['Month Name'].iloc[0]
+    # Agrupar por parceiro, país, mês e ano
+    grouped = df.groupby(['Partner', 'Country', 'Month', 'Year', 'Month_Name'])
+    
+    invoices_data = []
+    
+    for (partner, country, month, year, month_name), group in grouped:
+        # Somar valores
+        total_sales = group['Sales'].sum()
+        total_royalty = group['Royalty_Amount'].sum()
+        total_ad_fund = group['Ad_Fund_Amount'].sum()
+        total_tax = group['Tax_Amount'].sum()
+        total_amount = group['Total_Amount'].sum()
+        amount_usd = group['Amount_USD'].sum()
+        currency = group['Currency'].iloc[0]  # Assume que a moeda é a mesma para o grupo
         
-        group_data = {
+        # Média das taxas (para mostrar na fatura)
+        avg_royalty_rate = group['Royalty_Rate'].mean()
+        avg_ad_fund_rate = group['Ad_Fund_Rate'].mean()
+        tax_rate = group['Tax_Rate'].iloc[0]  # Assume que a taxa de imposto é a mesma
+        
+        # Criar dados para fatura
+        invoice_data = {
             'partner': partner,
             'country': country,
-            'year': year,
             'month': month,
+            'year': year,
             'month_name': month_name,
-            'currency': group_df['Currency'].iloc[0],
-            'total_sell_out': group_df['Amount'].sum(),
-            'royalty_amount': group_df['Royalty Amount'].sum(),
-            'ad_fund_amount': group_df['Ad Fund Amount'].sum(),
-            'subtotal': group_df['Subtotal'].sum(),
-            'tax_amount': group_df['Tax Amount'].sum(),
-            'total_amount': group_df['Total Amount'].sum(),
-            'royalty_rate': group_df['Royalty Rate'].iloc[0],
-            'ad_fund_rate': group_df['Ad Fund Rate'].iloc[0],
-            'tax_rate': group_df['Tax Rate'].iloc[0],
-            'details': group_df.to_dict('records'),
+            'total_sales': total_sales,
+            'royalty_rate': avg_royalty_rate,
+            'royalty_amount': total_royalty,
+            'ad_fund_rate': avg_ad_fund_rate,
+            'ad_fund_amount': total_ad_fund,
+            'tax_rate': tax_rate,
+            'tax_amount': total_tax,
+            'total_amount': total_amount,
+            'amount_usd': amount_usd,
+            'currency': currency,
+            'invoice_number': f"INV-{country[:3]}-{partner[:3]}-{year}{month:02d}",
             'created_at': datetime.now(),
-            'invoice_number': f"{partner[:3].upper()}-{year}{month:02d}-{country}"
+            'sent': False,
+            'paid': False,
+            'payment_amount': 0,
+            'due_status': 'A Vencer'  # Status inicial
         }
         
-        grouped_data.append(group_data)
+        invoices_data.append(invoice_data)
     
-    return grouped_data
+    return invoices_data
 
 def import_payment_data(file):
     """
@@ -160,28 +269,37 @@ def import_payment_data(file):
     - (DataFrame, bool, str): (dados, é_válido, mensagem_de_erro)
     """
     try:
-        # Determina o tipo de arquivo com base na extensão
-        if file.name.endswith('.csv'):
+        # Detectar tipo de arquivo
+        file_extension = os.path.splitext(file.name)[1].lower()
+        
+        if file_extension == '.csv':
             df = pd.read_csv(file)
-        elif file.name.endswith(('.xls', '.xlsx')):
+        elif file_extension in ['.xlsx', '.xls']:
             df = pd.read_excel(file)
         else:
-            return None, False, "Formato de arquivo não suportado. Por favor, faça upload de um arquivo CSV ou Excel."
+            return None, False, "Formato de arquivo não suportado. Utilize CSV ou Excel."
         
-        # Valida colunas obrigatórias
-        required_columns = ['Date', 'Amount', 'Description', 'Reference']
+        # Verificar colunas mínimas necessárias
+        required_columns = ['Date', 'Amount', 'Description']
         missing_columns = [col for col in required_columns if col not in df.columns]
         
         if missing_columns:
-            return None, False, f"Colunas obrigatórias ausentes: {', '.join(missing_columns)}"
+            return df, False, f"Colunas obrigatórias ausentes: {', '.join(missing_columns)}"
         
-        # Converte coluna de data para datetime
-        df['Date'] = pd.to_datetime(df['Date'])
+        # Tentar converter data
+        try:
+            df['Date'] = pd.to_datetime(df['Date'])
+        except:
+            return df, False, "Formato de data inválido. Utilize o formato YYYY-MM-DD."
         
-        # Garante que Amount é numérico
+        # Validar valores numéricos para montante
+        if not pd.to_numeric(df['Amount'], errors='coerce').notnull().all():
+            return df, False, "Valores de pagamento inválidos. Utilize apenas valores numéricos."
+        
+        # Converter Amount para numérico
         df['Amount'] = pd.to_numeric(df['Amount'])
         
-        return df, True, ""
-    
+        return df, True, "Dados de pagamento válidos."
+        
     except Exception as e:
-        return None, False, f"Erro ao importar dados de pagamento: {str(e)}"
+        return None, False, f"Erro ao importar arquivo: {str(e)}"

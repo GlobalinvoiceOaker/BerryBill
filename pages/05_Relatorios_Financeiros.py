@@ -38,7 +38,7 @@ st.markdown('<div class="description">Generate and view financial reports based 
 if 'invoices' not in st.session_state or not st.session_state.invoices:
     st.warning("No invoices generated. Please generate invoices first.")
     if st.button("Go to Generate Invoices"):
-        st.switch_page("pages/02_Generate_Invoices.py")
+        st.switch_page("pages/02_Gerar_Faturas.py")
 else:
     # Summary metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -183,8 +183,8 @@ else:
     
     with col1:
         if st.button("Go to Import Data"):
-            st.switch_page("pages/01_Import_Data.py")
+            st.switch_page("pages/01_Importar_Dados.py")
     
     with col2:
         if st.button("Go to Reconcile Payments"):
-            st.switch_page("pages/04_Reconcile_Payments.py")
+            st.switch_page("pages/04_Reconciliar_Pagamentos.py")

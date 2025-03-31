@@ -38,7 +38,7 @@ st.markdown('<div class="description">Send generated invoices via email to partn
 if 'invoices' not in st.session_state or not st.session_state.invoices:
     st.warning("No invoices generated. Please generate invoices first.")
     if st.button("Go to Generate Invoices"):
-        st.switch_page("pages/02_Generate_Invoices.py")
+        st.switch_page("pages/02_Gerar_Faturas.py")
 else:
     # Initialize partner emails in session state if not exists
     if 'partner_emails' not in st.session_state:
@@ -251,8 +251,8 @@ else:
         
         with col1:
             if st.button("Go to Reconcile Payments"):
-                st.switch_page("pages/04_Reconcile_Payments.py")
+                st.switch_page("pages/04_Reconciliar_Pagamentos.py")
         
         with col2:
             if st.button("Go to Financial Reports"):
-                st.switch_page("pages/05_Financial_Reports.py")
+                st.switch_page("pages/05_Relatorios_Financeiros.py")

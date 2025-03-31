@@ -1,30 +1,36 @@
-/* Estilo personalizado para o menu lateral */
-.css-1d391kg {
+/* 
+   Estilo personalizado para o Sistema de Gerenciamento de Faturas
+   Cores principais:
+   - Roxo (#4A1F60) como cor primária
+   - Branco (#FFFFFF) para fundos e texto
+   - Roxo escuro (#3A174E) para botões
+*/
+
+/* Estilo da barra lateral */
+.sidebar .sidebar-content {
     background-color: #4A1F60 !important;
+    color: white !important;
 }
 
-/* Estilo personalizado para os itens do menu */
-.css-1x8cf1d, .css-10xlvwk {
-    color: #FFFFFF !important;
+/* Título da barra lateral */
+.sidebar .sidebar-content h1 {
+    color: white !important;
     font-weight: bold !important;
-    font-size: 16px !important;
-    text-transform: uppercase !important;
+    font-size: 1.5rem !important;
 }
 
-/* Hover para itens do menu */
-.css-1x8cf1d:hover, .css-10xlvwk:hover {
-    background-color: #3A174E !important;
+/* Itens do menu da barra lateral */
+.sidebar .sidebar-content [data-testid="stVerticalBlock"] div:has(div[data-testid="stMarkdown"]) {
+    background-color: #3A174E;
+    border-radius: 5px;
+    padding: 8px;
+    margin-bottom: 10px;
 }
 
-/* Estilo para o item selecionado */
-.css-1x8cf1d [data-testid="stVerticalBlock"] {
-    border-right: 3px solid white !important;
-    background-color: #3A174E !important;
-}
-
-/* Cabeçalhos e títulos */
-h1, h2, h3, .main-header {
-    color: #4A1F60 !important;
+/* Título dos itens do menu */
+.sidebar .sidebar-content [data-testid="stMarkdown"] p {
+    color: white !important;
+    font-size: 1.2rem !important;
     font-weight: bold !important;
 }
 
@@ -32,23 +38,226 @@ h1, h2, h3, .main-header {
 .stButton > button {
     background-color: #4A1F60 !important;
     color: white !important;
+    border: 1px solid #3A174E !important;
+    border-radius: 6px !important;
     font-weight: bold !important;
-    border-radius: 5px !important;
-    border: none !important;
-    padding: 0.5rem 1rem !important;
     transition: all 0.3s ease !important;
 }
 
 .stButton > button:hover {
     background-color: #3A174E !important;
+    border: 1px solid #ffffff !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Métricas */
-.stMetric {
-    background-color: #F5F1F9 !important;
-    padding: 1rem !important;
-    border-radius: 5px !important;
-    border-left: 4px solid #4A1F60 !important;
+/* Botões de tipo primário (destaque) */
+button[kind="primary"] {
+    background-color: #3A174E !important;
+    color: white !important;
+    font-weight: bold !important;
+}
+
+/* Formulários e campos de entrada */
+.stTextInput > div > div > input, 
+.stSelectbox > div > div > div,
+.stNumberInput > div > div > input {
+    border-radius: 6px !important;
+    border: 1px solid #ccc !important;
+}
+
+.stTextInput > div > div > input:focus, 
+.stSelectbox > div > div > div:focus,
+.stNumberInput > div > div > input:focus {
+    border: 1px solid #4A1F60 !important;
+    box-shadow: 0 0 5px rgba(74, 31, 96, 0.3) !important;
+}
+
+/* Cabeçalhos */
+h1, h2, h3 {
+    color: #4A1F60 !important;
+    font-weight: bold !important;
+}
+
+/* Expanders */
+.streamlit-expanderHeader {
+    background-color: #f5f0f7 !important;
+    border-radius: 6px !important;
+    font-weight: bold !important;
+    color: #4A1F60 !important;
+}
+
+/* Cards e caixas */
+[data-testid="stMetricValue"] {
+    color: #4A1F60 !important;
+    font-weight: bold !important;
+    font-size: 1.8rem !important;
+}
+
+[data-testid="stMetric"] {
+    background-color: #f7f7f7 !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-testid="stMetricLabel"] {
+    font-weight: bold !important;
+}
+
+/* Datatable */
+[data-testid="stDataFrame"] {
+    border-radius: 8px !important;
+    overflow: hidden !important;
+}
+
+/* Tabelas e dataframes */
+.dataframe {
+    font-family: Arial, sans-serif !important;
+}
+
+.dataframe th {
+    background-color: #4A1F60 !important;
+    color: white !important;
+    font-weight: bold !important;
+    padding: 8px !important;
+}
+
+.dataframe td {
+    padding: 8px !important;
+}
+
+/* Abas */
+button[role="tab"] {
+    color: #4A1F60 !important;
+    font-weight: bold !important;
+}
+
+button[role="tab"][aria-selected="true"] {
+    color: #3A174E !important;
+    border-bottom-color: #3A174E !important;
+}
+
+/* Alertas e mensagens */
+.stAlert {
+    border-radius: 8px !important;
+    padding: 15px !important;
+}
+
+/* Footer */
+footer {
+    visibility: hidden;
+}
+
+/* Textos em roxo e telas de login */
+.login-title {
+    color: #4A1F60 !important;
+    font-size: 2rem !important;
+    font-weight: bold !important;
+}
+
+.login-box {
+    background-color: #ffffff !important;
+    border-radius: 10px !important;
+    padding: 30px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    max-width: 500px !important;
+    margin: 0 auto !important;
+}
+
+/* Estilo para links de download */
+.download-link {
+    display: inline-block;
+    background-color: #4A1F60;
+    color: white;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-radius: 6px;
+    text-decoration: none;
+    margin-top: 10px;
+    text-align: center;
+    transition: background-color 0.3s;
+}
+
+.download-link:hover {
+    background-color: #3A174E;
+    text-decoration: none;
+}
+
+/* Status de faturas */
+.status-paid {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.status-unpaid {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.status-sent {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* Botões de ação para as invoices */
+.action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    background-color: #4A1F60;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    padding: 5px 8px;
+    margin: 2px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.action-button:hover {
+    background-color: #3A174E;
+}
+
+.action-button-delete {
+    background-color: #dc3545;
+}
+
+.action-button-delete:hover {
+    background-color: #c82333;
+}
+
+.action-button-view {
+    background-color: #17a2b8;
+}
+
+.action-button-view:hover {
+    background-color: #138496;
+}
+
+.action-button-pay {
+    background-color: #28a745;
+}
+
+.action-button-pay:hover {
+    background-color: #218838;
+}
+
+.action-button-edit {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.action-button-edit:hover {
+    background-color: #e0a800;
 }

@@ -34,10 +34,10 @@ st.markdown('<div class="main-header">Gerar Faturas</div>', unsafe_allow_html=Tr
 st.markdown('<div class="description">Crie faturas com base em dados processados e cálculos</div>', unsafe_allow_html=True)
 
 # Verifica se os dados foram importados
-if st.session_state.imported_data is None:
+if 'imported_data' not in st.session_state or st.session_state.imported_data is None:
     st.warning("Nenhum dado importado. Por favor, importe dados primeiro.")
     if st.button("Ir para Importar Dados"):
-        st.switch_page("pages/01_Import_Data.py")
+        st.switch_page("pages/01_Importar_Dados.py")
 else:
     # Exibe resumo dos dados
     processed_data = st.session_state.imported_data
@@ -160,8 +160,8 @@ else:
         
         with col1:
             if st.button("Enviar Faturas"):
-                st.switch_page("pages/03_Send_Invoices.py")
+                st.switch_page("pages/03_Enviar_Faturas.py")
         
         with col2:
             if st.button("Reconciliar Pagamentos"):
-                st.switch_page("pages/04_Reconcile_Payments.py")
+                st.switch_page("pages/04_Reconciliar_Pagamentos.py")

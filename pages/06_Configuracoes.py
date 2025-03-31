@@ -179,7 +179,7 @@ with st.expander("Data Overview"):
         st.metric("Total Invoices", num_invoices)
     
     with col2:
-        has_imported_data = "Yes" if st.session_state.imported_data is not None else "No"
+        has_imported_data = "Yes" if 'imported_data' in st.session_state and st.session_state.imported_data is not None else "No"
         st.metric("Data Imported", has_imported_data)
     
     with col3:

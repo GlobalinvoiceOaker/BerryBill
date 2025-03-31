@@ -232,6 +232,9 @@ def group_data_by_partner(df):
         avg_ad_fund_rate = group['Ad_Fund_Rate'].mean()
         tax_rate = group['Tax_Rate'].iloc[0]  # Assume que a taxa de imposto é a mesma
         
+        # Calcular o subtotal (soma de royalties e fundo de publicidade)
+        subtotal = total_royalty + total_ad_fund
+        
         # Criar dados para fatura
         invoice_data = {
             'partner': partner,
@@ -244,6 +247,7 @@ def group_data_by_partner(df):
             'royalty_amount': total_royalty,
             'ad_fund_rate': avg_ad_fund_rate,
             'ad_fund_amount': total_ad_fund,
+            'subtotal': subtotal,  # Adicionando o subtotal
             'tax_rate': tax_rate,
             'tax_amount': total_tax,
             'total_amount': total_amount,

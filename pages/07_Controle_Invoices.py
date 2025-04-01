@@ -178,6 +178,32 @@ else:
         # Exibir informações detalhadas da fatura selecionada
         st.markdown("#### Detalhes da Fatura Selecionada")
         
+        # Histórico de Pagamentos
+        if 'payments' in selected_invoice and selected_invoice['payments']:
+            st.markdown("##### Histórico de Pagamentos")
+            payment_history = []
+            for payment in selected_invoice['payments']:
+                payment_history.append({
+                    'Data': payment['date'].strftime('%d/%m/%Y') if isinstance(payment['date'], datetime) else payment['date'],
+                    'Valor Recebido': f"{payment['currency']} {payment['amount']:,.2f}",
+                    'Variação Cambial': f"{payment['currency']} {payment['exchange_variation']:,.2f}"
+                })
+            
+            st.dataframe(pd.DataFrame(payment_history), use_container_width=True)
+            
+            # Mostrar total recebido e saldo
+            total_received = sum(p['amount'] for p in selected_invoice['payments'])
+            balance = selected_invoice['total_amount'] - total_received
+            total_variation = sum(p['exchange_variation'] for p in selected_invoice['payments'])
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Recebido", f"{selected_invoice['currency']} {total_received:,.2f}")
+            with col2:
+                st.metric("Saldo", f"{selected_invoice['currency']} {balance:,.2f}")
+            with col3:
+                st.metric("Variação Cambial Total", f"{selected_invoice['currency']} {total_variation:,.2f}")
+        
         col1, col2 = st.columns(2)
         
         with col1:
@@ -214,10 +240,52 @@ else:
             st.markdown(pdf_link, unsafe_allow_html=True)
         
         with col3:
-            # Botão para marcar como paga
-            if st.button("Marcar como Paga" if not selected_invoice.get('paid', False) else "Desmarcar Pagamento", 
-                        use_container_width=True,
-                        key="pay_invoice"):
+            # Botão para registrar pagamento
+            if st.button("Registrar Pagamento", use_container_width=True, key="register_payment"):
+                payment_form = st.form("payment_form")
+                with payment_form:
+                    received_amount = st.number_input(
+                        f"Valor Recebido ({selected_invoice.get('currency', 'USD')})",
+                        min_value=0.0,
+                        max_value=float(selected_invoice.get('total_amount', 0)),
+                        value=0.0
+                    )
+                    
+                    payment_date = st.date_input(
+                        "Data do Recebimento",
+                        value=datetime.now()
+                    )
+                    
+                    exchange_variation = st.number_input(
+                        "Variação Cambial (+ ou -)",
+                        value=0.0
+                    )
+                    
+                    submit_payment = st.form_submit_button("Confirmar Pagamento")
+                    
+                    if submit_payment:
+                        # Encontrar a invoice original na lista de sessão e atualizar
+                        for inv in st.session_state.invoices:
+                            if inv.get('invoice_number') == selected_invoice.get('invoice_number'):
+                                if 'payments' not in inv:
+                                    inv['payments'] = []
+                                    
+                                payment_info = {
+                                    'date': payment_date,
+                                    'amount': received_amount,
+                                    'exchange_variation': exchange_variation,
+                                    'currency': inv.get('currency', 'USD')
+                                }
+                                
+                                inv['payments'].append(payment_info)
+                                inv['payment_amount'] = sum(p['amount'] for p in inv['payments'])
+                                inv['paid'] = inv['payment_amount'] >= inv['total_amount']
+                                
+                                if inv['paid']:
+                                    inv['payment_date'] = payment_date
+                                
+                        st.success(f"Pagamento de {selected_invoice.get('currency')} {received_amount:,.2f} registrado com sucesso!")
+                        st.rerun()
                 
                 # Encontrar a invoice original na lista de sessão e atualizar
                 for inv in st.session_state.invoices:

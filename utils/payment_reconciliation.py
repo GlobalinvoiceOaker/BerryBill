@@ -167,14 +167,17 @@ def reconcile_payments(payments_df, invoices):
     
     return reconciled_payments, updated_invoices
 
-def manually_reconcile_payment(payment, invoice, amount, invoices):
+def manually_reconcile_payment(payment, invoice, amount, payment_date, received_currency_amount, exchange_variation=0, invoices=None):
     """
     Reconcilia manualmente um pagamento com uma fatura
     
     Parâmetros:
     - payment: Dicionário contendo informações de pagamento
     - invoice: Dicionário contendo informações da fatura
-    - amount: Valor a ser aplicado à fatura
+    - amount: Valor a ser aplicado à fatura em USD
+    - payment_date: Data do recebimento
+    - received_currency_amount: Valor recebido na moeda original
+    - exchange_variation: Variação cambial (positiva ou negativa)
     - invoices: Lista de todas as faturas
     
     Retorna:

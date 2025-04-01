@@ -170,8 +170,30 @@ def create_invoice_pdf(invoice_data):
     elements.append(Spacer(1, 0.25 * inch))
     
     # Tabela De-Para (informações de faturamento)
-    # Mapeamento de códigos de país para nomes completos
+    # Mapeamento de códigos de país para nomes completos (atualizados para 3 letras)
     country_names = {
+        'BRA': 'Brasil',
+        'USA': 'Estados Unidos',
+        'ESP': 'Espanha',
+        'PRT': 'Portugal',
+        'MEX': 'México',
+        'COL': 'Colômbia',
+        'ARG': 'Argentina',
+        'CHL': 'Chile',
+        'PER': 'Peru',
+        'ITA': 'Itália',
+        'GBR': 'Reino Unido',
+        'FRA': 'França',
+        'DEU': 'Alemanha',
+        'AUS': 'Austrália',
+        'NZL': 'Nova Zelândia',
+        'JPN': 'Japão',
+        'CHN': 'China',
+        'ARE': 'Emirados Árabes Unidos',
+        'SAU': 'Arábia Saudita',
+        'KWT': 'Kuwait',
+        'QAT': 'Qatar',
+        # Também mantemos a compatibilidade com códigos de 2 letras para backward compatibility
         'BR': 'Brasil',
         'US': 'Estados Unidos',
         'ES': 'Espanha',

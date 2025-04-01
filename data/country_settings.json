@@ -1,52 +1,171 @@
 {
+    "USA": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.0,
+        "currency": "USD"
+    },
+    "GBR": {
+        "royalty_rate": 0.06,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.20,
+        "currency": "GBP"
+    },
+    "BRA": {
+        "royalty_rate": 0.06,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.17,
+        "currency": "BRL"
+    },
+    "CAN": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.05,
+        "currency": "CAD"
+    },
+    "DEU": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.19,
+        "currency": "EUR"
+    },
+    "FRA": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.20,
+        "currency": "EUR"
+    },
+    "ESP": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.21,
+        "currency": "EUR"
+    },
+    "MEX": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.16,
+        "currency": "MXN"
+    },
+    "JPN": {
+        "royalty_rate": 0.06,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.10,
+        "currency": "JPY"
+    },
+    "AUS": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.10,
+        "currency": "AUD"
+    },
+    "COL": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.19,
+        "currency": "COP"
+    },
+    "ARG": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.21,
+        "currency": "ARS"
+    },
+    "CHL": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.19,
+        "currency": "CLP"
+    },
+    "PER": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.18,
+        "currency": "PEN"
+    },
+    "PRT": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.23,
+        "currency": "EUR"
+    },
+    "ARE": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.05,
+        "currency": "AED"
+    },
+    "SAU": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.15,
+        "currency": "SAR"
+    },
+    "NZL": {
+        "royalty_rate": 0.05,
+        "ad_fund_rate": 0.02,
+        "tax_rate": 0.15,
+        "currency": "NZD"
+    },
+    
     "US": {
         "royalty_rate": 0.05,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.0
+        "tax_rate": 0.0,
+        "currency": "USD"
     },
     "UK": {
         "royalty_rate": 0.06,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.20
+        "tax_rate": 0.20,
+        "currency": "GBP"
     },
     "BR": {
         "royalty_rate": 0.06,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.17
+        "tax_rate": 0.17,
+        "currency": "BRL"
     },
     "CA": {
         "royalty_rate": 0.05,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.05
+        "tax_rate": 0.05,
+        "currency": "CAD"
     },
     "DE": {
         "royalty_rate": 0.05,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.19
+        "tax_rate": 0.19,
+        "currency": "EUR"
     },
     "FR": {
         "royalty_rate": 0.05,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.20
+        "tax_rate": 0.20,
+        "currency": "EUR"
     },
     "ES": {
         "royalty_rate": 0.05,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.21
+        "tax_rate": 0.21,
+        "currency": "EUR"
     },
     "MX": {
         "royalty_rate": 0.05,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.16
+        "tax_rate": 0.16,
+        "currency": "MXN"
     },
     "JP": {
         "royalty_rate": 0.06,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.10
+        "tax_rate": 0.10,
+        "currency": "JPY"
     },
     "AU": {
         "royalty_rate": 0.05,
         "ad_fund_rate": 0.02,
-        "tax_rate": 0.10
+        "tax_rate": 0.10,
+        "currency": "AUD"
     }
 }

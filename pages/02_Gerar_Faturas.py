@@ -408,8 +408,67 @@ with tabs[1]:
             # Seleção de país e parceiro
             col_country, col_partner = st.columns(2)
             with col_country:
-                countries = list(country_settings.keys())
-                country = st.selectbox("País", options=countries)
+                # Mapeamento de códigos de país para nomes completos (atualizados para 3 letras)
+                country_names = {
+                    'BRA': 'Brasil',
+                    'USA': 'Estados Unidos',
+                    'ESP': 'Espanha',
+                    'PRT': 'Portugal',
+                    'MEX': 'México',
+                    'COL': 'Colômbia',
+                    'ARG': 'Argentina',
+                    'CHL': 'Chile',
+                    'PER': 'Peru',
+                    'ITA': 'Itália',
+                    'GBR': 'Reino Unido',
+                    'FRA': 'França',
+                    'DEU': 'Alemanha',
+                    'AUS': 'Austrália',
+                    'NZL': 'Nova Zelândia',
+                    'JPN': 'Japão',
+                    'CHN': 'China',
+                    'ARE': 'Emirados Árabes Unidos',
+                    'SAU': 'Arábia Saudita',
+                    'KWT': 'Kuwait',
+                    'QAT': 'Qatar',
+                    # Também mantemos a compatibilidade com códigos de 2 letras
+                    'BR': 'Brasil',
+                    'US': 'Estados Unidos',
+                    'ES': 'Espanha',
+                    'PT': 'Portugal',
+                    'MX': 'México',
+                    'CO': 'Colômbia',
+                    'AR': 'Argentina',
+                    'CL': 'Chile',
+                    'PE': 'Peru',
+                    'IT': 'Itália',
+                    'UK': 'Reino Unido',
+                    'FR': 'França',
+                    'DE': 'Alemanha',
+                    'AU': 'Austrália',
+                    'NZ': 'Nova Zelândia',
+                    'JP': 'Japão',
+                    'CN': 'China',
+                    'AE': 'Emirados Árabes Unidos',
+                    'SA': 'Arábia Saudita',
+                    'KW': 'Kuwait',
+                    'QA': 'Qatar',
+                }
+                
+                # Criar opções de país com nome e código para o selectbox
+                country_options = []
+                country_codes = {}
+                for code in country_settings.keys():
+                    name = country_names.get(code, code)
+                    display_name = f"{name} ({code})"
+                    country_options.append(display_name)
+                    country_codes[display_name] = code
+                
+                # Exibir selectbox com nomes completos
+                country_display = st.selectbox("País", options=country_options)
+                
+                # Extrair o código do país da opção selecionada
+                country = country_codes[country_display]
             
             with col_partner:
                 partner = st.text_input("Nome do Parceiro/Master", 
@@ -706,8 +765,30 @@ with tabs[1]:
                 
             st.markdown(f"**Parceiro:** {invoice['partner']}")
             
-            # Mapeamento de códigos de país para nomes completos
+            # Mapeamento de códigos de país para nomes completos (atualizados para 3 letras)
             country_names = {
+                'BRA': 'Brasil',
+                'USA': 'Estados Unidos',
+                'ESP': 'Espanha',
+                'PRT': 'Portugal',
+                'MEX': 'México',
+                'COL': 'Colômbia',
+                'ARG': 'Argentina',
+                'CHL': 'Chile',
+                'PER': 'Peru',
+                'ITA': 'Itália',
+                'GBR': 'Reino Unido',
+                'FRA': 'França',
+                'DEU': 'Alemanha',
+                'AUS': 'Austrália',
+                'NZL': 'Nova Zelândia',
+                'JPN': 'Japão',
+                'CHN': 'China',
+                'ARE': 'Emirados Árabes Unidos',
+                'SAU': 'Arábia Saudita',
+                'KWT': 'Kuwait',
+                'QAT': 'Qatar',
+                # Também mantemos a compatibilidade com códigos de 2 letras
                 'BR': 'Brasil',
                 'US': 'Estados Unidos',
                 'ES': 'Espanha',
@@ -785,8 +866,30 @@ with tabs[1]:
         st.markdown('<div class="sub-header">Faturas Geradas</div>', unsafe_allow_html=True)
         
         # Converter para DataFrame para exibição mais fácil
-        # Mapeamento de códigos de país para nomes completos
+        # Mapeamento de códigos de país para nomes completos (atualizados para 3 letras)
         country_names = {
+            'BRA': 'Brasil',
+            'USA': 'Estados Unidos',
+            'ESP': 'Espanha',
+            'PRT': 'Portugal',
+            'MEX': 'México',
+            'COL': 'Colômbia',
+            'ARG': 'Argentina',
+            'CHL': 'Chile',
+            'PER': 'Peru',
+            'ITA': 'Itália',
+            'GBR': 'Reino Unido',
+            'FRA': 'França',
+            'DEU': 'Alemanha',
+            'AUS': 'Austrália',
+            'NZL': 'Nova Zelândia',
+            'JPN': 'Japão',
+            'CHN': 'China',
+            'ARE': 'Emirados Árabes Unidos',
+            'SAU': 'Arábia Saudita',
+            'KWT': 'Kuwait',
+            'QAT': 'Qatar',
+            # Também mantemos a compatibilidade com códigos de 2 letras
             'BR': 'Brasil',
             'US': 'Estados Unidos',
             'ES': 'Espanha',

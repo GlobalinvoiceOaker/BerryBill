@@ -450,21 +450,24 @@ with tabs[1]:
             col_royalty, col_adfund, col_tax = st.columns(3)
             
             with col_royalty:
-                default_royalty = country_settings.get(country, {}).get('royalty_rate', 5.0)
+                # Ajuste aqui: multiplicamos por 100 para exibir como percentual e dividimos ao salvar
+                default_royalty = country_settings.get(country, {}).get('royalty_rate', 0.05) * 100
                 royalty_rate = st.number_input("Taxa de Royalties (%)", 
                                             min_value=0.0, max_value=100.0, 
                                             value=default_royalty, 
                                             format="%.2f")
             
             with col_adfund:
-                default_adfund = country_settings.get(country, {}).get('ad_fund_rate', 2.0)
+                # Ajuste aqui: multiplicamos por 100 para exibir como percentual e dividimos ao salvar
+                default_adfund = country_settings.get(country, {}).get('ad_fund_rate', 0.02) * 100
                 ad_fund_rate = st.number_input("Taxa do Fundo de Publicidade (%)", 
                                              min_value=0.0, max_value=100.0, 
                                              value=default_adfund, 
                                              format="%.2f")
             
             with col_tax:
-                default_tax = country_settings.get(country, {}).get('tax_rate', 0.0)
+                # Ajuste aqui: multiplicamos por 100 para exibir como percentual e dividimos ao salvar
+                default_tax = country_settings.get(country, {}).get('tax_rate', 0.0) * 100
                 tax_rate = st.number_input("Taxa de Imposto (%)", 
                                          min_value=0.0, max_value=100.0, 
                                          value=default_tax, 
@@ -625,12 +628,12 @@ with tabs[1]:
                         'month_name': month_name,
                         'total_sales': total_sales,
                         'total_sell_out': total_sales,
-                        'royalty_rate': royalty_rate,
+                        'royalty_rate': royalty_rate / 100,  # Dividir por 100 para armazenar como decimal
                         'royalty_amount': royalty_amount,
-                        'ad_fund_rate': ad_fund_rate,
+                        'ad_fund_rate': ad_fund_rate / 100,  # Dividir por 100 para armazenar como decimal
                         'ad_fund_amount': ad_fund_amount,
                         'subtotal': subtotal,
-                        'tax_rate': tax_rate,
+                        'tax_rate': tax_rate / 100,  # Dividir por 100 para armazenar como decimal
                         'tax_amount': tax_amount,
                         'total_amount': total_amount,
                         'amount_usd': amount_usd,
@@ -747,9 +750,9 @@ with tabs[1]:
             with col1:
                 st.markdown("**Cálculos:**")
                 st.markdown(f"Vendas: {invoice['currency']} {invoice['total_sales']:,.2f}")
-                st.markdown(f"Royalties ({invoice['royalty_rate']}%): {invoice['currency']} {invoice['royalty_amount']:,.2f}")
-                st.markdown(f"Fundo ({invoice['ad_fund_rate']}%): {invoice['currency']} {invoice['ad_fund_amount']:,.2f}")
-                st.markdown(f"Impostos ({invoice['tax_rate']}%): {invoice['currency']} {invoice['tax_amount']:,.2f}")
+                st.markdown(f"Royalties ({invoice['royalty_rate']*100:.1f}%): {invoice['currency']} {invoice['royalty_amount']:,.2f}")
+                st.markdown(f"Fundo ({invoice['ad_fund_rate']*100:.1f}%): {invoice['currency']} {invoice['ad_fund_amount']:,.2f}")
+                st.markdown(f"Impostos ({invoice['tax_rate']*100:.1f}%): {invoice['currency']} {invoice['tax_amount']:,.2f}")
             
             with col2:
                 st.markdown("**Totais:**")

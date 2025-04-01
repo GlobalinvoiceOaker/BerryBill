@@ -64,7 +64,11 @@ def create_invoice_pdf(invoice_data):
     # Cria elementos de conteúdo
     elements = []
     
-    # Logo da empresa (se existir)
+    # Criando um grid para o cabeçalho (Logo à esquerda, "FATURA" à direita)
+    header_data = [[None, None]]
+    header_table = Table(header_data, colWidths=[3*inch, 3*inch])
+    
+    # Coluna esquerda - Logo da empresa
     logo_paths = ['assets/logo_header.svg', 'assets/oakberry_logo.svg', 'attached_assets/Logo redonda arara roxa.jpg']
     logo_found = False
     
@@ -74,14 +78,14 @@ def create_invoice_pdf(invoice_data):
                 # Converter SVG para objeto ReportLab
                 try:
                     logo_drawing = svg2rlg(logo_path)
-                    # Redimensionar para um tamanho pequeno no canto superior
+                    # Redimensionar para um tamanho adequado
                     aspect_ratio = logo_drawing.width / logo_drawing.height
-                    logo_width = 1.2 * inch  # Largura reduzida
+                    logo_width = 1.5 * inch  # Um pouco maior
                     logo_height = logo_width / aspect_ratio
                     logo_drawing.width = logo_width
                     logo_drawing.height = logo_height
-                    # Adicionar ao documento
-                    elements.append(logo_drawing)
+                    # Adicionar ao cabeçalho
+                    header_data[0][0] = logo_drawing
                     logo_found = True
                     break
                 except Exception as e:
@@ -89,19 +93,33 @@ def create_invoice_pdf(invoice_data):
             else:
                 # Se for uma imagem raster, usamos a classe Image
                 try:
-                    img = Image(logo_path, width=1.2*inch, height=None)  # Manter proporções
-                    elements.append(img)
+                    img = Image(logo_path, width=1.5*inch, height=None)  # Manter proporções
+                    header_data[0][0] = img
                     logo_found = True
                     break
                 except Exception as e:
                     print(f"Erro ao processar imagem {logo_path}: {str(e)}")
     
-    # Se encontrou um logo, adiciona um pequeno espaço depois
-    if logo_found:
-        elements.append(Spacer(1, 0.15 * inch))
+    # Coluna direita - Texto "FATURA" e número da fatura
+    fatura_title = Paragraph("FATURA", title_style)
+    fatura_number = Paragraph(f"#{invoice_data['invoice_number']}", header_style)
     
-    # Título
-    elements.append(Paragraph("FATURA", title_style))
+    # Adicionar título e número à célula direita
+    right_cell = []
+    right_cell.append(fatura_title)
+    right_cell.append(Spacer(1, 0.05 * inch))
+    right_cell.append(fatura_number)
+    header_data[0][1] = right_cell
+    
+    # Configurar o estilo da tabela de cabeçalho
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (0, 0), 'MIDDLE'),  # Logo alinhado verticalmente ao meio
+        ('ALIGN', (1, 0), (1, 0), 'RIGHT'),     # Texto alinhado à direita
+        ('VALIGN', (1, 0), (1, 0), 'MIDDLE'),   # Texto alinhado verticalmente ao meio
+    ]))
+    
+    # Adicionar a tabela de cabeçalho aos elementos
+    elements.append(header_table)
     elements.append(Spacer(1, 0.25 * inch))
     
     # Determinar datas de emissão e vencimento
@@ -208,10 +226,10 @@ def create_invoice_pdf(invoice_data):
     summary_data = [
         ["Descrição", "Taxa", "Valor", f"Valor ({invoice_data['currency']})"],
         ["Total de Vendas", "", "", f"{invoice_data['total_sell_out']:,.2f}"],
-        ["Impostos", f"{invoice_data['tax_rate']*100:.1f}%", "", f"{invoice_data['tax_amount']:,.2f}"],
+        ["Impostos", f"{invoice_data['tax_rate']:.1f}%", "", f"{invoice_data['tax_amount']:,.2f}"],
         ["Base para Cálculo", "", "", f"{invoice_data['total_sell_out'] - invoice_data['tax_amount']:,.2f}"],
-        ["Royalties", f"{invoice_data['royalty_rate']*100:.1f}%", "", f"{invoice_data['royalty_amount']:,.2f}"],
-        ["Fundo de Publicidade", f"{invoice_data['ad_fund_rate']*100:.1f}%", "", f"{invoice_data['ad_fund_amount']:,.2f}"],
+        ["Royalties", f"{invoice_data['royalty_rate']:.1f}%", "", f"{invoice_data['royalty_amount']:,.2f}"],
+        ["Fundo de Publicidade", f"{invoice_data['ad_fund_rate']:.1f}%", "", f"{invoice_data['ad_fund_amount']:,.2f}"],
         ["Subtotal", "", "", f"{invoice_data['subtotal']:,.2f}"],
         ["Total a Pagar", "", "", f"{invoice_data['total_amount']:,.2f}"]
     ]

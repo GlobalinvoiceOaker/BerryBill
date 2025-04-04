@@ -8,3 +8,4 @@ reportlab
 python-dotenv
 streamlit-authenticator
 email-validator
+svglib

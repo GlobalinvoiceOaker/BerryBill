@@ -6,3 +6,5 @@ openpyxl
 python-docx
 reportlab
 python-dotenv
+streamlit-authenticator
+email-validator
